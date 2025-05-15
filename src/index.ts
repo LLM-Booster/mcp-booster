@@ -24,6 +24,7 @@ import {
 } from "./config";
 import { FormatterFactory } from "./modules/formatters";
 import { z } from "zod";
+import open from 'open';
 
 // Instância do logger
 let logger: any;
@@ -34,7 +35,7 @@ let server: McpServer | null = null;
 // Instância do serviço CoConuT_Storage
 let coconutService: CoConuTService | null = null;
 
-// Estado global para as funções
+// Estado global para as funções lambda
 let coconutState: CoConuTState = {
   thoughtHistory: [],
   interactionCount: 0,
@@ -47,6 +48,7 @@ let coconutState: CoConuTState = {
 
 /**
  * Processa argumentos de linha de comando
+ * @param useLogger Se deve usar o logger para exibir mensagens (se false, usa console)
  */
 function processCommandLineArgs(useLogger = false) {
   const args = process.argv.slice(2);
@@ -54,7 +56,7 @@ function processCommandLineArgs(useLogger = false) {
     if (args[i] === '--api-key' && i + 1 < args.length) {
       const apiKey = args[i + 1];
 
-      // Armazenar a chave
+      // Armazenar a chave sem validação
       setApiKey(apiKey);
 
       // Log apropriado dependendo se o logger já foi inicializado
@@ -70,7 +72,7 @@ function processCommandLineArgs(useLogger = false) {
   }
 }
 
-// Definindo interfaces para as respostas
+// Definindo interfaces para as respostas dos endpoints
 interface CoConuTResponse {
   thoughtNumber: number;
   totalThoughts: number;
@@ -122,7 +124,7 @@ interface AnalyserOutput {
 }
 
 /**
- * Função para chamar o endpoint externo
+ * Função para chamar o endpoint CoConuT
  */
 async function callCoConuTEndpoint(params: CoConuTParams): Promise<CoConuTLambdaResult> {
   try {
@@ -153,14 +155,14 @@ async function callCoConuTEndpoint(params: CoConuTParams): Promise<CoConuTLambda
 
     // Verificar se a resposta foi bem-sucedida
     if (!response.ok) {
-      throw new Error(`Erro na chamada ao endpoint: ${response.status} ${response.statusText}`);
+      throw new Error(`Erro ao chamar endpoint CoConuT: ${response.status} ${response.statusText}`);
     }
 
     // Analisar a resposta
     const result = await response.json();
     return result;
   } catch (error: any) {
-    logger.error("Erro ao chamar endpoint", { error });
+    logger.error("Erro ao chamar endpoint CoConuT", { error });
     throw error;
   }
 }
@@ -249,18 +251,6 @@ function setupServer() {
 
   // Log específico sobre o status do armazenamento
   logger.info("Armazenamento de pensamentos configurado com validação. O modelo DEVE fornecer um caminho válido em cada interação!");
-
-  // Exemplo de recurso
-  server.resource(
-    "hello",
-    "custom://hello",
-    async () => ({
-      contents: [{
-        uri: "custom://hello",
-        text: "Olá do servidor MCP! Ele é capaz de resolver problemas com pensamento contínuo em cadeia."
-      }]
-    })
-  );
 
   // Configurar ferramentas CoConuT, CoConuT_Storage e CoConuT_Analyser
   setupCoConuTTools();
@@ -532,6 +522,85 @@ export interface ServerOptions {
 }
 
 /**
+ * Abre o site llmbooster.com no navegador padrão
+ * @param reason Motivo pelo qual o redirecionamento está sendo feito
+ * @param useLogger Se deve usar o logger para exibir mensagens (se false, usa console)
+ */
+async function openLLMBoosterWebsite(reason: string, useLogger = true): Promise<void> {
+  const url = 'https://llmbooster.com/error/api-key';
+
+  // Verificar se o redirecionamento automático está habilitado
+  if (!config.api.autoRedirectOnError) {
+    const message = `Por favor, visite ${url} para ${reason}`;
+
+    if (useLogger && logger) {
+      logger.warn(message);
+    } else {
+      console.warn(`\n⚠️  ${message}\n`);
+    }
+    return;
+  }
+
+  try {
+    const message = `Redirecionando para ${url} para ${reason}`;
+
+    if (useLogger && logger) {
+      logger.info(message);
+    } else {
+      console.log(`\n\n⚠️  ${message}...\n`);
+    }
+
+    // Abrir o URL no navegador padrão
+    await open(url);
+  } catch (error) {
+    const errorMessage = `Não foi possível abrir o navegador automaticamente. Por favor, visite ${url} para ${reason}`;
+
+    if (useLogger && logger) {
+      logger.error(errorMessage);
+    } else {
+      console.error(`\n❌  ${errorMessage}\n`);
+    }
+  }
+}
+
+/**
+ * Verifica se a API key é válida fazendo uma chamada para o endpoint de verificação
+ * @param useLogger Se deve usar o logger para exibir mensagens (se false, usa console)
+ * @returns Promise<boolean> True se a API key for válida, False caso contrário
+ */
+async function verifyApiKey(useLogger = true): Promise<boolean> {
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    return false;
+  }
+
+  try {
+    // Preparar cabeçalhos com a API key
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${apiKey}`
+    };
+
+    // Fazer a chamada ao endpoint de verificação
+    const response = await fetch('https://api.llmbooster.com', {
+      method: 'POST',
+      headers
+    });
+
+    // Verificar se a resposta foi bem-sucedida (código 2xx)
+    return response.ok;
+  } catch (error) {
+    // Em caso de erro na chamada (problema de rede, etc.), retornar false
+    if (useLogger && logger) {
+      logger.error('Erro ao verificar API key', { error });
+    } else {
+      console.error('Erro ao verificar API key:', error);
+    }
+    return false;
+  }
+}
+
+/**
  * Inicializa o servidor MCP com as configurações fornecidas
  * @param options Opções de inicialização
  */
@@ -540,6 +609,15 @@ export async function initializeServer(options: ServerOptions = {}): Promise<voi
     // Processar argumentos de linha de comando antes da inicialização do logger
     // Passamos false para indicar que deve usar console.log em vez de logger
     processCommandLineArgs(false);
+
+    // Verificar se a variável de ambiente para desativar redirecionamento automático está definida
+    if (process.env.MCP_COCONUT_NO_REDIRECT === 'true') {
+      updateConfig({
+        api: {
+          autoRedirectOnError: false
+        }
+      });
+    }
 
     // Atualizar configurações com as opções fornecidas
     if (options.config) {
@@ -561,11 +639,24 @@ export async function initializeServer(options: ServerOptions = {}): Promise<voi
     // Inicializar o logger
     initializeLogger();
 
-    // Se a API key não foi configurada, exibir aviso simples
+    // Se a API key não foi configurada, exibir aviso e redirecionar para o site
     if (!getApiKey()) {
       logger.error("API Key não configurada. Para usar API key, configure-a via opções, variável de ambiente ou linha de comando.");
+      await openLLMBoosterWebsite('obter uma API key válida', true);
     } else {
       logger.info("API Key configurada.");
+
+      // Verificar se a API key é válida
+      logger.info("Verificando validade da API key...");
+      const isValid = await verifyApiKey();
+
+      if (isValid) {
+        logger.info("API Key verificada com sucesso!");
+      } else {
+        logger.error("API Key inválida ou erro na verificação. As chamadas à API podem falhar.");
+        // Redirecionar para o site llmbooster.com em caso de API key inválida
+        await openLLMBoosterWebsite('resolver problemas com sua API key atual', true);
+      }
     }
 
     // Configurar o servidor e as ferramentas

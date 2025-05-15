@@ -1,5 +1,6 @@
 /**
- * Tipos para o serviço de armazenamento
+ * Tipos para o serviço CoConuT_Storage
+ * Apenas tipos essenciais para operações de armazenamento de conclusões
  */
 
 import { z } from 'zod';
@@ -26,7 +27,7 @@ export interface ThoughtEntry {
 }
 
 /**
- * Configurações
+ * Configurações para o CoConuT
  */
 export interface CoConuTConfig {
     persistenceEnabled: boolean;
@@ -54,7 +55,7 @@ export const DEFAULT_CONFIG: CoConuTConfig = {
 };
 
 /**
- * Parâmetros para a ferramenta principal
+ * Parâmetros para a ferramenta CoConuT
  */
 export interface CoConuTParams {
     thought: string;
@@ -77,7 +78,7 @@ export interface CoConuTParams {
 }
 
 /**
- * Resposta da ferramenta
+ * Resposta da ferramenta CoConuT
  */
 export interface CoConuTResponse {
     thoughtNumber: number;
@@ -98,7 +99,7 @@ export interface CoConuTResponse {
 }
 
 /**
- * Esquema Zod para validação de parâmetros
+ * Esquema Zod para validação de parâmetros do CoConuT
  */
 export const CoConuTParamsSchema = z.object({
     thought: z.string().describe("The current thought text in the reasoning process"),
@@ -129,7 +130,7 @@ export enum InputType {
 }
 
 /**
- * Parâmetros para a ferramenta de armazenamento
+ * Parâmetros para a ferramenta CoConuT_Storage
  */
 export interface CoConuTStorageParams {
     projectPath: string;    // Caminho para o projeto onde os arquivos serão salvos
@@ -158,7 +159,7 @@ export interface CoConuTStorageParams {
 }
 
 /**
- * Esquema Zod para validação de parâmetros de armazenamento
+ * Esquema Zod para validação de parâmetros do CoConuT_Storage
  */
 export const CoConuTStorageParamsSchema = z.object({
     projectPath: z.string().describe("Absolute path to the project directory where files will be saved. This path will be used to create the necessary directory structure for storing thought chains, conclusions, and interaction history."),
@@ -199,7 +200,7 @@ export enum EventType {
 }
 
 /**
- * Interface para dados de eventos
+ * Interface para dados de evento
  */
 export interface EventData {
     type: EventType;
@@ -208,7 +209,7 @@ export interface EventData {
 }
 
 /**
- * Interface para ouvintes de eventos
+ * Interface para listeners de eventos
  */
 export interface EventListener {
     handleEvent(event: EventData): void;

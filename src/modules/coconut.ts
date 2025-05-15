@@ -1,5 +1,6 @@
 /**
- * Módulo para operações de armazenamento
+ * Módulo simplificado do CoConuT para operações de armazenamento
+ * Mantém apenas a funcionalidade de armazenamento necessária para o serviço CoConuT_Storage
  */
 
 import {
@@ -14,7 +15,7 @@ import { MemoryStorageProvider } from './storage';
 import { CoConuT_Storage } from './coconut-storage';
 
 /**
- * Classe para operações de armazenamento
+ * Classe simplificada para operações de armazenamento do CoConuT
  */
 export class CoConuTService {
     private config: CoConuTConfig;
@@ -39,7 +40,8 @@ export class CoConuTService {
     }
 
     /**
-     * Salva pensamentos e conclusão no armazenamento
+     * Salva pensamentos e conclusão no armazenamento persistente
+     * Este método é chamado pela ferramenta CoConuT_Storage
      */
     public async saveWithStorage(
         projectPath: string,
@@ -77,7 +79,7 @@ export class CoConuTService {
     }
 
     /**
-     * Configura o caminho do projeto
+     * Configura o caminho do projeto para uso futuro
      */
     public setProjectPath(projectPath: string): void {
         this.projectPath = projectPath;

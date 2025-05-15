@@ -1,5 +1,6 @@
 /**
- * Módulo para armazenamento e conclusões
+ * Storage and conclusion module for CoConuT
+ * Generates conclusions and explanations of changes made in the chain of thoughts
  */
 
 import * as fs from 'fs';
@@ -44,7 +45,7 @@ interface I18nMessages {
 }
 
 /**
- * Classe responsável por gerar conclusões e salvar o histórico
+ * Classe responsável por gerar conclusões e salvar o histórico final de pensamentos
  */
 export class CoConuT_Storage {
     private logger: Logger;
@@ -55,7 +56,7 @@ export class CoConuT_Storage {
     private searchIndex: Map<string, Set<string>> = new Map();
 
     /**
-     * Mensagens internacionalizadas
+     * Mensagens internacionalizadas do sistema
      */
     private i18n: I18nMessages = {
         'error.no.path': {
@@ -91,7 +92,7 @@ export class CoConuT_Storage {
 
         // Verificar se o caminho do projeto está presente
         if (!config.projectPath) {
-            this.logger.warn('No project path configured. It will need to be provided in processConclusion');
+            this.logger.warn('CoConuT_Storage: No project path configured. It will need to be provided in processConclusion');
         }
 
         // Registrar o template padrão

@@ -1,5 +1,5 @@
 /**
- * Configuração do Servidor MCP
+ * Configuração do Servidor MCP para CoConuT e CoConuT_Storage
  */
 
 /**
@@ -17,10 +17,11 @@ export interface ServerConfig {
  */
 export interface ApiConfig {
     apiKey?: string;
+    autoRedirectOnError?: boolean;  // Controla se deve redirecionar automaticamente para o site em caso de erro
 }
 
 /**
- * Interface para configurações
+ * Interface para configurações do CoConuT
  */
 export interface CoConuTConfig {
     persistenceEnabled: boolean;
@@ -66,10 +67,11 @@ export const defaultConfig: Config = {
 
     // Configurações de API
     api: {
-        apiKey: undefined // Será configurado via parâmetros ou variáveis de ambiente
+        apiKey: undefined, // Será configurado via parâmetros ou variáveis de ambiente
+        autoRedirectOnError: true  // Por padrão, redireciona automaticamente para o site em caso de erro
     },
 
-    // Configurações
+    // Configurações do CoConuT
     coconut: {
         persistenceEnabled: true,
         maxHistorySize: 1000,
@@ -96,6 +98,7 @@ export let config: Config = { ...defaultConfig };
 
 /**
  * Atualiza a configuração do sistema com novos valores
+ * @param newConfig Configuração parcial com valores a serem atualizados
  */
 export function updateConfig(newConfig: Partial<Config>): void {
     // Mesclar configurações de servidor
@@ -121,6 +124,7 @@ export function updateConfig(newConfig: Partial<Config>): void {
 
 /**
  * Obtém a configuração atual do sistema
+ * @returns A configuração atual
  */
 export function getConfig(): Config {
     return config;
@@ -128,6 +132,7 @@ export function getConfig(): Config {
 
 /**
  * Configura a API key
+ * @param apiKey API key a ser configurada
  */
 export function setApiKey(apiKey: string): void {
     config.api.apiKey = apiKey;
@@ -135,6 +140,7 @@ export function setApiKey(apiKey: string): void {
 
 /**
  * Obtém a API key atual
+ * @returns A API key atual ou undefined se não estiver configurada
  */
 export function getApiKey(): string | undefined {
     return config.api.apiKey;
