@@ -1,0 +1,55 @@
+{
+  "name": "mcp-booster",
+  "version": "1.0.0",
+  "description": "Servidor MCP com CoConuT (Continuous Chain of Thought) para uso com Cursor IDE",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "mcp-booster": "./bin/server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/src/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "cursor",
+    "ide",
+    "coconut",
+    "continuous-chain-of-thought",
+    "reasoning",
+    "llm",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@types/node": "^22.15.0",
+    "@types/string-similarity": "^4.0.2",
+    "string-similarity": "^4.0.4",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/llm-booster/mcp-booster.git"
+  },
+  "bugs": {
+    "url": "https://github.com/llm-booster/mcp-booster/issues"
+  }
+}
