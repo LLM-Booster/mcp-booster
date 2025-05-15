@@ -141,9 +141,9 @@ export class CoConuT_Storage {
 
         // Template único semântico como template default
         this.registerTemplate('default', `## {emoji} {category} | {impactLevel} [ID:{id}]
-**Por que:** {whyChange}
-**O que:** {whatChange}
-**Arquivos:** {affectedFilesInline}
+**Why:** {whyChange}
+**What:** {whatChange}
+**Files:** {affectedFilesInline}
 <!-- metadata -->
 `);
     }
@@ -338,12 +338,12 @@ export class CoConuT_Storage {
             }
 
             // Create interaction summary text
-            const summary = `## Resumo da Interação ${interactionSummary.thoughtNumber}/${interactionSummary.totalThoughts}
+            const summary = `## Interaction Summary ${interactionSummary.thoughtNumber}/${interactionSummary.totalThoughts}
 
-### Por que foi feito
+### Why it was done
 ${interactionSummary.why}
 
-### O que foi feito
+### What was done
 ${interactionSummary.what}`;
 
             // Save the summary to the conclusion.md file
@@ -405,12 +405,12 @@ ${interactionSummary.what}`;
     private formatAffectedFiles(files: string[]): string {
         try {
             if (!files || files.length === 0) {
-                return 'Nenhum arquivo afetado especificado.';
+                return 'No affected files specified.';
             }
 
             return files.map(file => `- \`${file}\``).join('\n');
         } catch (error) {
-            return 'Erro ao formatar arquivos afetados.';
+            return 'Error formatting affected files.';
         }
     }
 
@@ -420,12 +420,12 @@ ${interactionSummary.what}`;
     private formatAffectedFilesInline(files: string[]): string {
         try {
             if (!files || files.length === 0) {
-                return 'Nenhum arquivo afetado especificado.';
+                return 'No affected files specified.';
             }
 
             return files.map(file => `\`${file}\``).join(', ');
         } catch (error) {
-            return 'Erro ao formatar arquivos afetados.';
+            return 'Error formatting affected files.';
         }
     }
 
@@ -435,12 +435,12 @@ ${interactionSummary.what}`;
     private formatAlternatives(alternatives: string[]): string {
         try {
             if (!alternatives || alternatives.length === 0) {
-                return 'Nenhuma alternativa considerada foi especificada.';
+                return 'No alternatives considered were specified.';
             }
 
             return alternatives.map((alt, i) => `${i + 1}. ${alt}`).join('\n');
         } catch (error) {
-            return 'Erro ao formatar alternativas consideradas.';
+            return 'Error formatting considered alternatives.';
         }
     }
 
@@ -450,12 +450,12 @@ ${interactionSummary.what}`;
     private formatRelatedConclusions(conclusions: string[]): string {
         try {
             if (!conclusions || conclusions.length === 0) {
-                return 'Nenhuma conclusão relacionada.';
+                return 'No related conclusions.';
             }
 
             return conclusions.map(ref => `- ${ref}`).join('\n');
         } catch (error) {
-            return 'Erro ao formatar conclusões relacionadas.';
+            return 'Error formatting related conclusions.';
         }
     }
 
@@ -466,17 +466,17 @@ ${interactionSummary.what}`;
         try {
             if (!snippets || snippets.length === 0) return '';
 
-            let result = `\n### 💻 Alterações de código\n`;
+            let result = `\n### 💻 Code Changes\n`;
 
             snippets.forEach((snippet, index) => {
-                result += `#### Alteração ${index + 1} em \`${snippet.file}\`\n`;
-                result += `**Antes:**\n\`\`\`\n${snippet.before}\n\`\`\`\n\n`;
-                result += `**Depois:**\n\`\`\`\n${snippet.after}\n\`\`\`\n\n`;
+                result += `#### Change ${index + 1} in \`${snippet.file}\`\n`;
+                result += `**Before:**\n\`\`\`\n${snippet.before}\n\`\`\`\n\n`;
+                result += `**After:**\n\`\`\`\n${snippet.after}\n\`\`\`\n\n`;
             });
 
             return result;
         } catch (error) {
-            return '\n### 💻 Erro ao formatar snippets de código\n';
+            return '\n### 💻 Error formatting code snippets\n';
         }
     }
 
@@ -672,16 +672,16 @@ ${interactionSummary.what}`;
             let context = '';
 
             if (metadata.businessContext) {
-                context += `#### Contexto de Negócio\n${metadata.businessContext}\n\n`;
+                context += `#### Business Context\n${metadata.businessContext}\n\n`;
             }
 
             if (metadata.technicalContext) {
-                context += `#### Contexto Técnico\n${metadata.technicalContext}\n\n`;
+                context += `#### Technical Context\n${metadata.technicalContext}\n\n`;
             }
 
-            return context || 'Nenhum contexto adicional fornecido.';
+            return context || 'No additional context provided.';
         } catch (error) {
-            return 'Erro ao formatar contexto.';
+            return 'Error formatting context.';
         }
     }
 } 
