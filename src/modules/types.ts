@@ -213,4 +213,36 @@ export interface EventData {
  */
 export interface EventListener {
     handleEvent(event: EventData): void;
+}
+
+/**
+ * Interface para respostas de erro estruturadas
+ * 
+ * Permite fornecer informações detalhadas sobre erros para melhor processamento pela LLM
+ */
+export interface ErrorResponse {
+    code: string;            // Código do erro (ex: "VALIDATION_ERROR", "EXECUTION_ERROR")
+    message: string;         // Mensagem principal do erro
+    details?: string;        // Detalhes técnicos adicionais 
+    suggestions?: string[];  // Sugestões para resolver o problema
+    context?: {              // Contexto em que o erro ocorreu
+        paramName?: string;    // Nome do parâmetro com problema
+        methodName?: string;   // Nome do método com problema
+        input?: any;           // Entrada que causou o erro (redatada se necessário)
+    };
+}
+
+/**
+ * Códigos de erro comuns para padronização
+ */
+export enum ErrorCode {
+    VALIDATION_ERROR = 'VALIDATION_ERROR',
+    EXECUTION_ERROR = 'EXECUTION_ERROR',
+    NETWORK_ERROR = 'NETWORK_ERROR',
+    AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
+    NOT_FOUND_ERROR = 'NOT_FOUND_ERROR',
+    METHOD_NOT_ALLOWED = 'METHOD_NOT_ALLOWED',
+    INVALID_INPUT = 'INVALID_INPUT',
+    INVALID_STATE = 'INVALID_STATE',
+    INTERNAL_ERROR = 'INTERNAL_ERROR'
 } 

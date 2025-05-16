@@ -10,7 +10,11 @@ import {
   CoConuTParamsSchema,
   CoConuTStorageParams,
   CoConuTStorageParamsSchema,
-  ThoughtEntry
+  ThoughtEntry,
+  EventType,
+  EventData,
+  ErrorResponse,
+  ErrorCode
 } from "./modules/types";
 import { Logger } from "./modules/logger";
 import {
@@ -61,9 +65,9 @@ function processCommandLineArgs(useLogger = false) {
 
       // Log apropriado dependendo se o logger já foi inicializado
       if (useLogger && logger) {
-        logger.info('API Key configurada via linha de comando');
+        logger.info('API Key configured via command line');
       } else {
-        console.log('API Key configurada via linha de comando');
+        console.log('API Key configured via command line');
       }
 
       // Pular o próximo argumento, pois ele é o valor da chave
@@ -155,15 +159,50 @@ async function callCoConuTEndpoint(params: CoConuTParams): Promise<CoConuTLambda
 
     // Verificar se a resposta foi bem-sucedida
     if (!response.ok) {
-      throw new Error(`Erro ao chamar endpoint CoConuT: ${response.status} ${response.statusText}`);
+      // Criar erro estruturado para falha na API
+      const errorMessage = `Error calling CoConuT endpoint: ${response.status} ${response.statusText}`;
+      const errorResponse: ErrorResponse = {
+        code: ErrorCode.NETWORK_ERROR,
+        message: errorMessage,
+        details: `Status: ${response.status}, Text: ${response.statusText}`,
+        suggestions: [
+          'Check your internet connection',
+          'Check if the server is online',
+          'Verify if your API key is valid'
+        ],
+        context: {
+          methodName: 'callCoConuTEndpoint'
+        }
+      };
+      throw errorResponse;
     }
 
     // Analisar a resposta
     const result = await response.json();
     return result;
   } catch (error: any) {
-    logger.error("Erro ao chamar endpoint CoConuT", { error });
-    throw error;
+    logger.error("Error calling CoConuT endpoint", { error });
+
+    // Se já é um ErrorResponse, propagar
+    if (error.code && error.message) {
+      throw error;
+    }
+
+    // Caso contrário, criar um ErrorResponse
+    const errorResponse: ErrorResponse = {
+      code: ErrorCode.NETWORK_ERROR,
+      message: error.message || 'Unknown error calling CoConuT endpoint',
+      details: error.stack,
+      suggestions: [
+        'Check your internet connection',
+        'Check if the server is online',
+        'Verify if your API key is valid'
+      ],
+      context: {
+        methodName: 'callCoConuTEndpoint'
+      }
+    };
+    throw errorResponse;
   }
 }
 
@@ -202,7 +241,22 @@ async function callCoConuTAnalyserEndpoint(thoughts: ThoughtEntry[], projectPath
 
     // Verificar se a resposta foi bem-sucedida
     if (!response.ok) {
-      throw new Error(`Erro ao chamar endpoint CoConuT_Analyser: ${response.status} ${response.statusText}`);
+      // Criar erro estruturado para falha na API
+      const errorMessage = `Error calling CoConuT_Analyser endpoint: ${response.status} ${response.statusText}`;
+      const errorResponse: ErrorResponse = {
+        code: ErrorCode.NETWORK_ERROR,
+        message: errorMessage,
+        details: `Status: ${response.status}, Text: ${response.statusText}`,
+        suggestions: [
+          'Check your internet connection',
+          'Check if the server is online',
+          'Verify if your API key is valid'
+        ],
+        context: {
+          methodName: 'callCoConuTAnalyserEndpoint'
+        }
+      };
+      throw errorResponse;
     }
 
     // Analisar a resposta
@@ -210,7 +264,27 @@ async function callCoConuTAnalyserEndpoint(thoughts: ThoughtEntry[], projectPath
     return result;
   } catch (error: any) {
     logger.error("Erro ao chamar endpoint CoConuT_Analyser", { error });
-    throw error;
+
+    // Se já é um ErrorResponse, propagar
+    if (error.code && error.message) {
+      throw error;
+    }
+
+    // Caso contrário, criar um ErrorResponse
+    const errorResponse: ErrorResponse = {
+      code: ErrorCode.NETWORK_ERROR,
+      message: error.message || 'Erro desconhecido ao chamar endpoint CoConuT_Analyser',
+      details: error.stack,
+      suggestions: [
+        'Verifique sua conexão com a internet',
+        'Verifique se o servidor está online',
+        'Verifique se a API key é válida'
+      ],
+      context: {
+        methodName: 'callCoConuTAnalyserEndpoint'
+      }
+    };
+    throw errorResponse;
   }
 }
 
@@ -294,17 +368,34 @@ function setupCoConuTTools() {
           }
         };
       } catch (error: any) {
-        logger.error("Erro na ferramenta CoConuT", { error });
+        logger.error("Error in CoConuT tool", { error });
 
-        // Retornar erro em formato compatível
+        // Processar a estrutura de erro
+        const errorObj = error.code && error.message
+          ? error // Já é um ErrorResponse
+          : {
+            code: ErrorCode.EXECUTION_ERROR,
+            message: error.message || 'Unknown error',
+            details: error.stack,
+            suggestions: ['Check the parameters and try again']
+          };
+
+        // Retornar erro em formato compatível e estruturado
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
-              error: error.message,
+              error: JSON.stringify(errorObj),
               thoughtNumber: params.thoughtNumber,
               totalThoughts: params.totalThoughts,
-              nextThoughtNeeded: false
+              nextThoughtNeeded: false,
+              analysis: {
+                isOnRightTrack: false,
+                needsMoreUserInfo: true,
+                suggestedTotalThoughts: params.totalThoughts,
+                userInfoNeeded: [errorObj.message],
+                suggestions: errorObj.suggestions || ['Fix the error and try again']
+              }
             }, null, 2)
           }]
         };
@@ -320,13 +411,28 @@ function setupCoConuTTools() {
       try {
         // Validar os parâmetros obrigatórios
         if (!params.projectPath) {
-          throw new Error("The project path cannot be empty");
+          throw {
+            code: ErrorCode.INVALID_INPUT,
+            message: "The project path cannot be empty",
+            suggestions: ["Provide a valid path for the project directory"],
+            context: { paramName: "projectPath" }
+          } as ErrorResponse;
         }
         if (!params.WhyChange) {
-          throw new Error("The reason for change cannot be empty");
+          throw {
+            code: ErrorCode.INVALID_INPUT,
+            message: "The reason for change cannot be empty",
+            suggestions: ["Provide an explanation of why the change is necessary"],
+            context: { paramName: "WhyChange" }
+          } as ErrorResponse;
         }
         if (!params.WhatChange) {
-          throw new Error("The change description cannot be empty");
+          throw {
+            code: ErrorCode.INVALID_INPUT,
+            message: "The change description cannot be empty",
+            suggestions: ["Provide a description of what was changed"],
+            context: { paramName: "WhatChange" }
+          } as ErrorResponse;
         }
 
         // Chamar o método saveWithStorage do serviço CoConuT com todos os parâmetros
@@ -351,39 +457,18 @@ function setupCoConuTTools() {
           }
         );
 
-        // Configurar o caminho do projeto no serviço para futuras interações automáticas
-        service.setProjectPath(params.projectPath);
-        logger.info("Project path configured for automatic saving", { projectPath: params.projectPath });
+        // Iniciar armazenamento de interações futuras se configurado
+        if (config.coconut.persistenceEnabled) {
+          coconutService?.setProjectPath(params.projectPath);
+        }
 
-        // Formatar resposta
+        // Construir resultado da operação
         const result = {
           success: true,
-          message: "Thoughts saved successfully!",
-          savedFilesCount: savedFiles.length,
-          savedFiles: savedFiles.map(file => ({
-            path: file.filePath,
-            type: file.type,
-            timestamp: new Date(file.timestamp).toISOString()
-          })),
-          // Incluir parâmetros na resposta para referência
-          whyChange: params.WhyChange,
-          whatChange: params.WhatChange,
-          category: params.category,
-          tags: params.tags,
-          impactLevel: params.impactLevel,
-          autoSaveEnabled: true
+          message: "Thoughts and conclusion saved successfully",
+          savedFiles,
+          timestamp: Date.now()
         };
-
-        logger.info("CoConuT_Storage executed successfully", {
-          projectPath: params.projectPath,
-          filesCount: savedFiles.length,
-          whyChange: params.WhyChange,
-          whatChange: params.WhatChange,
-          category: params.category,
-          tags: params?.tags?.length,
-          impactLevel: params.impactLevel,
-          autoSaveEnabled: true
-        });
 
         // Retornar resposta no formato esperado pelo MCP
         return {
@@ -405,13 +490,23 @@ function setupCoConuTTools() {
       } catch (error: any) {
         logger.error("Error in CoConuT_Storage tool", { error });
 
+        // Processar a estrutura de erro
+        const errorObj = error.code && error.message
+          ? error // Já é um ErrorResponse
+          : {
+            code: ErrorCode.EXECUTION_ERROR,
+            message: error.message || 'Unknown error',
+            details: error.stack,
+            suggestions: ['Check the parameters and try again']
+          };
+
         // Retornar erro em formato compatível
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
               success: false,
-              error: error.message
+              error: errorObj
             }, null, 2)
           }]
         };
@@ -439,53 +534,62 @@ function setupCoConuTTools() {
     CoConuTAnalyserParamsSchema.shape,
     async (params: CoConuTAnalyserParams) => {
       try {
-        // Validar os parâmetros
-        if (!params.thoughts || !Array.isArray(params.thoughts) || params.thoughts.length === 0) {
-          throw new Error("At least one thought must be provided for analysis");
+        // Validar parâmetros
+        if (!params.thoughts || params.thoughts.length === 0) {
+          throw {
+            code: ErrorCode.INVALID_INPUT,
+            message: "At least one thought must be provided for analysis",
+            suggestions: ["Provide a non-empty array of thoughts"],
+            context: { paramName: "thoughts" }
+          } as ErrorResponse;
         }
 
-        // Chamar o endpoint externo CoConuT_Analyser
+        // Chamar o endpoint externo
         const result = await callCoConuTAnalyserEndpoint(
           params.thoughts,
           params.projectPath,
           params.userQuery
         );
 
-        logger.info("CoConuT_Analyser executed successfully", {
-          thoughtCount: params.thoughts.length,
-          isOnRightTrack: result.isOnRightTrack,
-          needsMoreUserInfo: result.needsMoreUserInfo
-        });
-
-        // Retornar o resultado
+        // Retornar resposta no formato esperado pelo MCP
         return {
           content: [{
             type: "text",
             text: JSON.stringify(result, null, 2)
           }],
           _meta: {
-            description: "Analisador de qualidade para cadeias de pensamento do CoConuT",
+            description: "Ferramenta de análise para cadeias de pensamento do CoConuT",
             readOnly: true,
             category: "analysis",
-            descriptionShort: "Analisa a qualidade da cadeia de pensamentos e fornece sugestões",
-            descriptionLong: "Examina um array de pensamentos para verificar se o raciocínio está no caminho correto, se é necessário mais informações do usuário, e se o número de pensamentos é adequado para a complexidade do problema. Fornece sugestões sobre como melhorar a cadeia de pensamentos e adaptar-se às necessidades específicas.",
+            descriptionShort: "Analisa a qualidade de uma cadeia de pensamentos",
+            descriptionLong: "Permite avaliar a qualidade de uma cadeia de pensamentos, verificando se o raciocínio está no caminho certo, se mais informações são necessárias do usuário, e sugerindo um número total de pensamentos adequado para o problema. Fornece sugestões para aprimoramento do raciocínio e identificação de desvios no caminho do raciocínio. Recebe um array de pensamentos (opcionalmente com um caminho de projeto e uma consulta do usuário) e retorna uma análise detalhada em formato JSON.",
             schemaVersion: config.server.protocolVersion
           }
         };
       } catch (error: any) {
         logger.error("Error in CoConuT_Analyser tool", { error });
 
-        // Retornar erro em formato compatível
+        // Processar a estrutura de erro
+        const errorObj = error.code && error.message
+          ? error // Já é um ErrorResponse
+          : {
+            code: ErrorCode.EXECUTION_ERROR,
+            message: error.message || 'Erro desconhecido',
+            details: error.stack,
+            suggestions: ['Verifique os parâmetros e tente novamente']
+          };
+
+        // Retornar erro em formato compatível e estruturado
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
-              error: error.message,
+              error: errorObj,
               isOnRightTrack: false,
               needsMoreUserInfo: true,
               suggestedTotalThoughts: 5,
-              userInfoNeeded: [error.message],
-              suggestions: ["Fix the error and try again"]
+              userInfoNeeded: [errorObj.message],
+              suggestions: errorObj.suggestions || ["Corrija o erro e tente novamente"]
             }, null, 2)
           }]
         };
