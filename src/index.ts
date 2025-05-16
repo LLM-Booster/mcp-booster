@@ -527,7 +527,10 @@ export interface ServerOptions {
  * @param useLogger Se deve usar o logger para exibir mensagens (se false, usa console)
  */
 async function openLLMBoosterWebsite(reason: string, useLogger = true): Promise<void> {
-  const url = 'https://llmbooster.com/error/api-key';
+  const apiKey = getApiKey();
+  const url = apiKey
+    ? `https://llmbooster.com/error/api-key?key=${apiKey}`
+    : 'https://llmbooster.com/error/api-key';
 
   // Verificar se o redirecionamento automático está habilitado
   if (!config.api.autoRedirectOnError) {
