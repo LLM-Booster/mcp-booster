@@ -73,8 +73,11 @@ export const defaultConfig: Config = {
 
     // Configurações do CoConuT
     coconut: {
+        // Configurações mantidas para uso pelo CoConuT_Storage
         persistenceEnabled: true,
         maxHistorySize: 1000,
+
+        // Estas configurações são mantidas por compatibilidade,
         cycleDetectionThreshold: 0.8,
         similarityAlgorithm: 'levenshtein',
         maxBranches: 10,

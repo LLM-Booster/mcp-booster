@@ -278,15 +278,11 @@ function setupCoConuTTools() {
         // Atualizar o estado global com o retornado pelo endpoint
         coconutState = lambdaResult.state;
 
-        // Obter o formatador configurado (padrão: json)
-        const formatter = FormatterFactory.createFormatter('json');
-        const formattedResponse = formatter.format(lambdaResult.response);
-
         // Retornar resposta no formato esperado pelo MCP
         return {
           content: [{
             type: "text",
-            text: formattedResponse.text
+            text: JSON.stringify(lambdaResult.response, null, 2)
           }],
           _meta: {
             description: "Ferramenta de raciocínio contínuo em cadeia (Continuous Chain of Thought)",
