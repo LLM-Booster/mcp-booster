@@ -1,4 +1,5 @@
 # MCP-CoConuT (Continuous Chain of Thought)
+[![smithery badge](https://smithery.ai/badge/@LLM-Booster/mcp-coconut)](https://smithery.ai/server/@LLM-Booster/mcp-coconut)
 
 Servidor MCP para integração do Continuous Chain of Thought (CoConuT) com o Cursor IDE, permitindo raciocínio em cadeia com análise de qualidade.
 
@@ -40,6 +41,14 @@ O MCP-CoConuT é um servidor que implementa o Model Context Protocol (MCP) para 
 - NPM
 
 ## Instalação
+
+### Installing via Smithery
+
+To install mcp-booster for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@LLM-Booster/mcp-coconut):
+
+```bash
+npx -y @smithery/cli install @LLM-Booster/mcp-coconut --client claude
+```
 
 ### Instalação global (para uso via linha de comando)
 
