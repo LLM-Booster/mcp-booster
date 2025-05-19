@@ -52,7 +52,7 @@ export class FileStorageProvider implements StorageProvider {
      */
     private setupPaths(projectPath: string): void {
         // Criar diretório de dados no caminho especificado
-        const storageDir = path.resolve(projectPath, 'coconut-data');
+        const storageDir = path.resolve(projectPath, 'booster-data');
 
         this.filePath = path.resolve(storageDir, 'thought-history.json');
         this.branchesFilePath = path.resolve(storageDir, 'branches.json');
