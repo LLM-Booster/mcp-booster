@@ -445,25 +445,17 @@ function setupCoConuTTools() {
     }
   );
 
-  // Esquema Zod para parâmetros do CoConuT_Analyser
+  // Esquema Zod permissivo para parâmetros do CoConuT_Analyser
+  // A validação detalhada será feita dentro da função
   const CoConuTAnalyserParamsSchema = z.object({
-    thoughts: z.array(
-      z.object({
-        thought: z.string().min(1, "Thought text cannot be empty"),
-        thoughtNumber: z.number().positive("Thought number must be positive"),
-        branchId: z.string().min(1, "Branch ID cannot be empty"),
-        score: z.number().min(0).max(10, "Score must be between 0 and 10"),
-        timestamp: z.number().positive("Timestamp must be positive"),
-        metadata: z.record(z.any()).optional()
-      }).strict()
-    ).nonempty("At least one thought must be provided for analysis"),
+    thoughts: z.any(), // Permitir qualquer coisa aqui
     projectPath: z.string().optional().describe("Project path for additional context"),
     userQuery: z.string().optional().describe("Original user query to check alignment")
-  }).strict();
+  });
 
-  // Interface para parâmetros do CoConuT_Analyser
+  // Interface flexível para parâmetros do CoConuT_Analyser
   interface CoConuTAnalyserParams {
-    thoughts: ThoughtEntry[];
+    thoughts?: any; // Permitir qualquer valor, validação interna
     projectPath?: string;
     userQuery?: string;
   }
@@ -473,50 +465,73 @@ function setupCoConuTTools() {
     "Booster_Analyser",
     CoConuTAnalyserParamsSchema.shape,
     async (params: CoConuTAnalyserParams) => {
-      try {
-        // Validar parâmetros com mensagens de erro detalhadas
-        try {
-          CoConuTAnalyserParamsSchema.parse(params);
-        } catch (validationError: any) {
-          if (validationError instanceof z.ZodError) {
-            const errorDetails = validationError.errors.map(err => {
-              const path = err.path.join('.');
-              return `Campo '${path}': ${err.message}`;
-            }).join('; ');
-
-            throw {
-              code: ErrorCode.VALIDATION_ERROR,
-              message: "Erro de validação nos parâmetros da ferramenta Booster_Analyser",
-              details: errorDetails,
-              suggestions: [
-                "Verifique se o array 'thoughts' contém objetos válidos do tipo ThoughtEntry",
-                "Cada thought deve ter: thought (string não vazia), thoughtNumber (número positivo), branchId (string não vazia), score (0-10), timestamp (número positivo)",
-                "Exemplo correto: {\"thought\": \"Meu pensamento\", \"thoughtNumber\": 1, \"branchId\": \"main\", \"score\": 7, \"timestamp\": 1234567890}",
-                "Os campos projectPath e userQuery são opcionais"
-              ],
-              context: {
-                paramName: "Booster_Analyser parameters",
-                receivedParams: JSON.stringify(params, null, 2),
-                validationErrors: validationError.errors
+      // Função helper para retornar erro diretamente
+      const returnError = (errorMessage: string) => {
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              error: errorMessage,
+              isOnRightTrack: false,
+              needsMoreUserInfo: true,
+              suggestedTotalThoughts: 5,
+              userInfoNeeded: [errorMessage],
+              suggestions: ['Fix the error and try again'],
+              metadata: {
+                errorTimestamp: new Date().toISOString()
               }
-            } as ErrorResponse;
-          }
-          throw validationError;
+            }, null, 2)
+          }]
+        };
+      };
+
+      // Validação manual detalhada dos parâmetros - SEM THROW
+
+      // Verificar se thoughts existe
+      if (!params.thoughts) {
+        return returnError("The 'thoughts' parameter is required");
+      }
+
+      // Verificar se thoughts é um array
+      if (!Array.isArray(params.thoughts)) {
+        return returnError("The 'thoughts' parameter must be an array");
+      }
+
+      // Verificar se o array não está vazio
+      if (params.thoughts.length === 0) {
+        return returnError("The 'thoughts' array cannot be empty");
+      }
+
+      // Validar cada thought no array
+      for (let i = 0; i < params.thoughts.length; i++) {
+        const thought = params.thoughts[i];
+
+        if (!thought || typeof thought !== 'object') {
+          return returnError(`Thought at index ${i} must be an object`);
         }
 
-        // Validação adicional para garantir que thoughts não está vazio
-        if (!params.thoughts || params.thoughts.length === 0) {
-          throw {
-            code: ErrorCode.INVALID_INPUT,
-            message: "O array 'thoughts' não pode estar vazio",
-            details: "A análise requer pelo menos um pensamento para ser executada",
-            suggestions: [
-              "Forneça pelo menos um objeto ThoughtEntry no array 'thoughts'",
-              "Certifique-se de que está passando os pensamentos gerados pela ferramenta Booster"
-            ],
-            context: { paramName: "thoughts", receivedValue: params.thoughts }
-          } as ErrorResponse;
+        if (!thought.thought || typeof thought.thought !== 'string' || thought.thought.trim() === '') {
+          return returnError(`Thought at index ${i} must have a non-empty 'thought' text`);
         }
+
+        if (!thought.thoughtNumber || typeof thought.thoughtNumber !== 'number' || thought.thoughtNumber <= 0) {
+          return returnError(`Thought at index ${i} must have a positive 'thoughtNumber'`);
+        }
+
+        if (!thought.branchId || typeof thought.branchId !== 'string' || thought.branchId.trim() === '') {
+          return returnError(`Thought at index ${i} must have a non-empty 'branchId'`);
+        }
+
+        if (thought.score === undefined || typeof thought.score !== 'number' || thought.score < 0 || thought.score > 10) {
+          return returnError(`Thought at index ${i} must have a 'score' between 0 and 10`);
+        }
+
+        if (!thought.timestamp || typeof thought.timestamp !== 'number' || thought.timestamp <= 0) {
+          return returnError(`Thought at index ${i} must have a positive 'timestamp'`);
+        }
+      }
+
+      try {
 
         // Chamar o endpoint externo
         const result = await callCoConuTAnalyserEndpoint(
@@ -543,69 +558,24 @@ function setupCoConuTTools() {
       } catch (error: any) {
         logger.error("Error in CoConuT_Analyser tool", { error });
 
-        // Processar a estrutura de erro de forma mais detalhada
-        let errorObj: ErrorResponse;
+        // Criar mensagem de erro simples
+        const simpleErrorMessage = error.message || 'An error occurred while analyzing thoughts.';
 
-        if (error.code && error.message) {
-          // Já é um ErrorResponse estruturado
-          errorObj = error;
-        } else {
-          // Criar ErrorResponse estruturado
-          errorObj = {
-            code: ErrorCode.EXECUTION_ERROR,
-            message: error.message || 'Erro desconhecido na ferramenta Booster_Analyser',
-            details: error.stack || 'Sem detalhes adicionais disponíveis',
-            suggestions: [
-              'Verifique se todos os parâmetros estão corretos',
-              'Certifique-se de que o array thoughts contém objetos ThoughtEntry válidos',
-              'Tente novamente com dados válidos',
-              'Se o problema persistir, verifique a conectividade de rede'
-            ],
-            context: {
-              methodName: 'Booster_Analyser'
-            }
-          };
-        }
-
-        // Retornar erro em formato compatível e estruturado com instruções claras
-        const errorResponse = {
-          error: {
-            ...errorObj,
-            howToFix: [
-              "📋 COMO CORRIGIR:",
-              "1. Verifique se está passando um array 'thoughts' válido",
-              "2. Cada elemento do array deve ser um objeto ThoughtEntry com os campos obrigatórios",
-              "3. Exemplo de uso correto:",
-              "   thoughts: [",
-              "     {",
-              "       thought: 'Meu primeiro pensamento',",
-              "       thoughtNumber: 1,",
-              "       branchId: 'main',",
-              "       score: 7,",
-              "       timestamp: Date.now(),",
-              "       metadata: {} // opcional",
-              "     }",
-              "   ]",
-              "4. Os campos projectPath e userQuery são opcionais",
-              "5. Certifique-se de que a API key está configurada corretamente"
-            ]
-          },
-          isOnRightTrack: false,
-          needsMoreUserInfo: true,
-          suggestedTotalThoughts: 5,
-          userInfoNeeded: [errorObj.message],
-          suggestions: errorObj.suggestions || ["Corrija o erro e tente novamente"],
-          metadata: {
-            errorTimestamp: new Date().toISOString(),
-            errorCode: errorObj.code,
-            validationRequired: true
-          }
-        };
-
+        // Retornar erro em formato simples e compatível
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(errorResponse, null, 2)
+            text: JSON.stringify({
+              error: simpleErrorMessage,
+              isOnRightTrack: false,
+              needsMoreUserInfo: true,
+              suggestedTotalThoughts: 5,
+              userInfoNeeded: [simpleErrorMessage],
+              suggestions: ['Fix the error and try again'],
+              metadata: {
+                errorTimestamp: new Date().toISOString()
+              }
+            }, null, 2)
           }]
         };
       }
