@@ -445,26 +445,35 @@ function setupCoConuTTools() {
     }
   );
 
-  // Esquema Zod permissivo para parâmetros do CoConuT_Analyser
-  // A validação detalhada será feita dentro da função
-  const CoConuTAnalyserParamsSchema = z.object({
-    thoughts: z.any(), // Permitir qualquer coisa aqui
-    projectPath: z.string().optional().describe("Project path for additional context"),
-    userQuery: z.string().optional().describe("Original user query to check alignment")
+  // Esquema Zod para validação de estrutura de ThoughtEntry
+  const ThoughtEntrySchema = z.object({
+    thought: z.string().describe("The current thought text in the reasoning process"),
+    thoughtNumber: z.number().positive().describe("Sequential number of this thought in the chain"),
+    branchId: z.string().describe("Unique identifier of the current branch"),
+    timestamp: z.number().positive().describe("Unix timestamp when the thought was created"),
+    score: z.number().min(0).max(10).optional().describe("Score or confidence associated with this thought (0-10)"),
+    metadata: z.record(z.any()).optional().describe("Additional metadata associated with this thought")
   });
 
-  // Interface flexível para parâmetros do CoConuT_Analyser
-  interface CoConuTAnalyserParams {
-    thoughts?: any; // Permitir qualquer valor, validação interna
+  // Esquema Zod para parâmetros do Booster_Analyser
+  const BoosterAnalyserParamsSchema = z.object({
+    thoughts: z.array(ThoughtEntrySchema).min(1).describe("Array of thoughts to analyze. Each thought must contain text, number, branchId, timestamp, and optionally score and metadata."),
+    projectPath: z.string().optional().describe("Project path for additional context"),
+    userQuery: z.string().describe("Original user query to check alignment - required for proper analysis")
+  });
+
+  // Interface para parâmetros do Booster_Analyser
+  interface BoosterAnalyserParams {
+    thoughts: ThoughtEntry[]; // Array tipado de ThoughtEntry
     projectPath?: string;
-    userQuery?: string;
+    userQuery: string; // Agora obrigatório
   }
 
-  // Implementação da ferramenta CoConuT_Analyser
+  // Implementação da ferramenta Booster_Analyser
   server.tool(
     "Booster_Analyser",
-    CoConuTAnalyserParamsSchema.shape,
-    async (params: CoConuTAnalyserParams) => {
+    BoosterAnalyserParamsSchema.shape,
+    async (params: BoosterAnalyserParams) => {
       // Função helper para retornar erro diretamente
       const returnError = (errorMessage: string) => {
         return {
@@ -485,51 +494,15 @@ function setupCoConuTTools() {
         };
       };
 
-      // Validação manual detalhada dos parâmetros - SEM THROW
+      // Validação manual para parâmetros obrigatórios
 
-      // Verificar se thoughts existe
-      if (!params.thoughts) {
-        return returnError("The 'thoughts' parameter is required");
+      // Verificar se userQuery existe (agora obrigatório)
+      if (!params.userQuery || typeof params.userQuery !== 'string' || params.userQuery.trim() === '') {
+        return returnError("The 'userQuery' parameter is required and must be a non-empty string");
       }
 
-      // Verificar se thoughts é um array
-      if (!Array.isArray(params.thoughts)) {
-        return returnError("The 'thoughts' parameter must be an array");
-      }
-
-      // Verificar se o array não está vazio
-      if (params.thoughts.length === 0) {
-        return returnError("The 'thoughts' array cannot be empty");
-      }
-
-      // Validar cada thought no array
-      for (let i = 0; i < params.thoughts.length; i++) {
-        const thought = params.thoughts[i];
-
-        if (!thought || typeof thought !== 'object') {
-          return returnError(`Thought at index ${i} must be an object`);
-        }
-
-        if (!thought.thought || typeof thought.thought !== 'string' || thought.thought.trim() === '') {
-          return returnError(`Thought at index ${i} must have a non-empty 'thought' text`);
-        }
-
-        if (!thought.thoughtNumber || typeof thought.thoughtNumber !== 'number' || thought.thoughtNumber <= 0) {
-          return returnError(`Thought at index ${i} must have a positive 'thoughtNumber'`);
-        }
-
-        if (!thought.branchId || typeof thought.branchId !== 'string' || thought.branchId.trim() === '') {
-          return returnError(`Thought at index ${i} must have a non-empty 'branchId'`);
-        }
-
-        if (thought.score === undefined || typeof thought.score !== 'number' || thought.score < 0 || thought.score > 10) {
-          return returnError(`Thought at index ${i} must have a 'score' between 0 and 10`);
-        }
-
-        if (!thought.timestamp || typeof thought.timestamp !== 'number' || thought.timestamp <= 0) {
-          return returnError(`Thought at index ${i} must have a positive 'timestamp'`);
-        }
-      }
+      // As validações detalhadas do array thoughts agora são feitas pelo schema Zod
+      // Se chegou até aqui, significa que thoughts está válido conforme ThoughtEntrySchema
 
       try {
 
@@ -547,7 +520,7 @@ function setupCoConuTTools() {
             text: JSON.stringify(result, null, 2)
           }],
           _meta: {
-            description: "Ferramenta de análise para cadeias de pensamentos do CoConuT",
+            description: "Ferramenta de análise para cadeias de pensamentos do Booster",
             readOnly: true,
             category: "analysis",
             descriptionShort: "Analisa a qualidade de uma cadeia de pensamentos",
@@ -556,7 +529,7 @@ function setupCoConuTTools() {
           }
         };
       } catch (error: any) {
-        logger.error("Error in CoConuT_Analyser tool", { error });
+        logger.error("Error in Booster_Analyser tool", { error });
 
         // Criar mensagem de erro simples
         const simpleErrorMessage = error.message || 'An error occurred while analyzing thoughts.';
