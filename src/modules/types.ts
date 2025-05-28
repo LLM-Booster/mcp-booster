@@ -69,12 +69,12 @@ export interface CoConuTParams {
     branchFromThought?: number;
     branchId?: string;
     needsMoreThoughts?: boolean;
-    score?: number;
+    score: number;
     inputType?: string;
-    problemStatus?: string;
+    problemStatus: string;
     options?: string[];
     numberArray?: number[];
-    Call_CoConuT_Analyser?: boolean;
+    Call_Booster_Analyser: boolean;
 }
 
 /**
@@ -111,12 +111,12 @@ export const CoConuTParamsSchema = z.object({
     branchFromThought: z.number().positive().optional().describe("Number of the thought from which this branch starts"),
     branchId: z.string().optional().describe("Unique identifier of the current branch"),
     needsMoreThoughts: z.boolean().optional().describe("Indicates if the problem needs more thoughts than initially estimated"),
-    score: z.number().min(0).max(10).optional().describe("Score or confidence associated with this thought (0-10)"),
+    score: z.number().min(0).max(10).describe("Score or confidence associated with this thought (0-10)"),
     inputType: z.string().optional().describe("Type of input expected from the user"),
-    problemStatus: z.string().optional().describe("Description of the current status of problem solving"),
+    problemStatus: z.string().describe("Description of the current status of problem solving"),
     options: z.array(z.string()).optional().describe("List of options for the user to choose from"),
     numberArray: z.array(z.number()).optional().describe("Array of numbers provided as input"),
-    Call_CoConuT_Analyser: z.boolean().optional().describe("Indicates if the CoConuT_Analyser should be called")
+    Call_Booster_Analyser: z.boolean().describe("Indicates if the Booster_Analyser should be called")
 });
 
 /**

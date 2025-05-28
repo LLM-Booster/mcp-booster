@@ -92,7 +92,7 @@ export class CoConuT_Storage {
 
         // Verificar se o caminho do projeto está presente
         if (!config.projectPath) {
-            this.logger.warn('CoConuT_Storage: No project path configured. It will need to be provided in processConclusion');
+            this.logger.warn('Booster_Storage: No project path configured. It will need to be provided in processConclusion');
         }
 
         // Registrar o template padrão
@@ -539,7 +539,7 @@ ${interactionSummary.what}`;
             }
 
             // Criar caminhos
-            const storageDir = path.resolve(projectPath, 'coconut-data');
+            const storageDir = path.resolve(projectPath, 'booster-data');
             const conclusionPath = path.resolve(storageDir, 'conclusion.md');
 
             // Garantir que o diretório existe
