@@ -14,4 +14,6 @@ package-lock.json
 # dist
 dist
 
+# data
 coconut-data
+booster-data
