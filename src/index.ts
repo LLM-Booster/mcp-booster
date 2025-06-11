@@ -192,14 +192,14 @@ async function callCoConuTEndpoint(params: CoConuTParams): Promise<CoConuTLambda
     }
 
     // Analisar a resposta
-    const result = await response.json();
+    const result = await response.json() as any;
 
     // Se a resposta contém um erro simples, propagar
     if (result.error) {
       throw new Error(result.error);
     }
 
-    return result;
+    return result as CoConuTLambdaResult;
   } catch (error: any) {
     logger.error("Error calling CoConuT endpoint", { error });
 
@@ -254,14 +254,14 @@ async function callCoConuTAnalyserEndpoint(thoughts: ThoughtEntry[], projectPath
     }
 
     // Analisar a resposta
-    const result = await response.json();
+    const result = await response.json() as any;
 
     // Se a resposta contém um erro simples, propagar
     if (result.error) {
       throw new Error(result.error);
     }
 
-    return result;
+    return result as AnalyserOutput;
   } catch (error: any) {
     logger.error("Error calling CoConuT_Analyser endpoint", { error });
 

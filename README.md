@@ -1,185 +1,74 @@
-# MCP-Booster
+# MCP-Booster 🚀
 
-Servidor MCP (Model Context Protocol) com funcionalidades avançadas de raciocínio contínuo e análise de qualidade para integração com IDEs como Cursor.
+[![npm version](https://badge.fury.io/js/mcp-booster.svg)](https://www.npmjs.com/package/mcp-booster)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Cross-Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/llm-booster/mcp-booster)
 
-## Visão Geral
+Servidor MCP com CoConuT (Continuous Chain of Thought) para uso com Cursor IDE - **Agora disponível como pacote NPM global universal!**
 
-O MCP-Booster é um servidor que implementa o Model Context Protocol (MCP) para fornecer capacidades avançadas de raciocínio e análise para modelos de linguagem. Ele oferece:
+## 🌟 Características
 
-- **Raciocínio Estruturado**: Sistema de pensamento em cadeia com validação de qualidade
-- **Análise de Qualidade**: Avaliação automática do progresso do raciocínio
-- **Armazenamento de Conclusões**: Documentação estruturada de mudanças e decisões
-- **Integração com IDEs**: Funcionamento otimizado para Cursor e outros ambientes de desenvolvimento
+- **🧠 Raciocínio Contínuo**: Sistema CoConuT para pensamento em cadeia
+- **📊 Análise Inteligente**: Validação automática da qualidade do raciocínio
+- **💾 Armazenamento Estruturado**: Persistência inteligente de dados
+- **🔧 Planejamento Inteligente**: Decomposição de tarefas com Booster_Steps
+- **🌍 Universal**: Compatível com Windows, macOS e Linux
+- **📦 Global**: Instale uma vez, use em qualquer lugar
 
-## Recursos Principais
+## 📋 Requisitos do Sistema
 
-### 🧠 Booster - Raciocínio Avançado
-- Sistema de pensamento em cadeia contínua
-- Pontuação de confiança (0-10) para cada etapa
-- Gerenciamento de status e progresso
-- Suporte a ramificações de pensamento
+- **Node.js**: ≥ 18.0.0
+- **NPM**: ≥ 8.0.0
+- **Sistemas Suportados**:
+  - Windows (x64, arm64)
+  - macOS (x64, arm64)
+  - Linux (x64, arm64)
 
-### 🔍 Booster_Analyser - Análise de Qualidade  
-- Validação automática da qualidade do raciocínio
-- Detecção de necessidade de informações adicionais
-- Sugestões para melhoria do processo
-- Análise de alinhamento com objetivos
+## 🚀 Instalação Global (Recomendada)
 
-### 💾 Booster_Storage - Armazenamento Estruturado
-- Documentação automática de mudanças
-- Categorização e tags para organização
-- Histórico completo de modificações
-- Contexto técnico e de negócio
-
-## Instalação
-
-### Instalação Global (Recomendado)
+### Instalação Rápida
 
 ```bash
 npm install -g mcp-booster
 ```
 
-### Instalação Local
+### Verificar Instalação
 
 ```bash
-npm install mcp-booster
+mcp-booster --help
+# ou
+which mcp-booster
 ```
 
-### Instalação via Código Fonte
+### Verificar Versão
 
 ```bash
-git clone https://github.com/llm-booster/mcp-booster.git
-cd mcp-booster
-npm install
-npm run build
+npm list -g mcp-booster
 ```
 
-## Configuração
+## 💻 Uso
 
-### Configuração da API Key
+### Iniciando o Servidor
 
-O MCP-Booster requer uma API key para funcionar. Configure de uma das seguintes formas:
-
-**1. Via linha de comando:**
 ```bash
-mcp-booster --api-key YOUR_API_KEY
-```
-
-**2. Via variável de ambiente:**
-```bash
-# Linux/Mac
-export MCP_BOOSTER_API_KEY=YOUR_API_KEY
+# Iniciar com configurações padrão
 mcp-booster
 
-# Windows (PowerShell)
-$env:MCP_BOOSTER_API_KEY = "YOUR_API_KEY"
+# Iniciar com API key
+mcp-booster --api-key YOUR_API_KEY
+
+# No Windows (PowerShell)
+mcp-booster.cmd
+
+# No Windows (CMD)
 mcp-booster
 ```
 
-**3. Via código (uso como biblioteca):**
-```typescript
-import { setApiKey, initializeServer } from 'mcp-booster';
+### Integrando com Cursor IDE
 
-setApiKey('YOUR_API_KEY');
-initializeServer();
-```
-
-### Obter API Key
-
-Para obter sua API key, visite: https://llmbooster.com
-
-## Uso
-
-### Como Servidor MCP (Padrão)
-
-```bash
-# Se instalado globalmente
-mcp-booster --api-key YOUR_API_KEY
-
-# Se instalado localmente  
-npx mcp-booster --api-key YOUR_API_KEY
-
-# Usando código fonte
-npm start -- --api-key YOUR_API_KEY
-npm run dev -- --api-key YOUR_API_KEY
-```
-
-### Como Biblioteca TypeScript
-
-```typescript
-import { initializeServer, updateConfig } from 'mcp-booster';
-
-// Configuração básica
-initializeServer({
-  apiKey: 'YOUR_API_KEY'
-});
-
-// Configuração avançada
-updateConfig({
-  server: {
-    name: "MCP-Booster-Custom"
-  },
-  logging: {
-    minLevel: "info"
-  }
-});
-
-initializeServer({
-  apiKey: 'YOUR_API_KEY',
-  config: {
-    // Configurações personalizadas
-  }
-});
-```
-
-## Ferramentas Disponíveis
-
-### Booster
-Ferramenta principal para raciocínio estruturado em cadeia.
-
-**Parâmetros obrigatórios:**
-- `thought`: Texto do pensamento atual
-- `thoughtNumber`: Número sequencial na cadeia (1, 2, 3...)
-- `totalThoughts`: Estimativa total de pensamentos necessários (mínimo 3)
-- `nextThoughtNeeded`: Se mais pensamentos são necessários (true/false)
-- `score`: Nível de confiança (0-10)
-- `problemStatus`: Descrição do status atual do problema
-- `Call_Booster_Analyser`: Se deve chamar análise de qualidade (true/false)
-
-**Parâmetros opcionais:**
-- `isRevision`: Se é uma revisão de pensamento anterior
-- `branchId`: Identificador de ramificação
-- `inputType`: Tipo de entrada esperada do usuário
-- `options`: Lista de opções para o usuário
-
-### Booster_Analyser  
-Ferramenta para análise da qualidade do raciocínio.
-
-**Parâmetros obrigatórios:**
-- `thoughts`: Array de pensamentos para análise
-- `userQuery`: Pergunta original do usuário
-
-**Parâmetros opcionais:**
-- `projectPath`: Caminho do projeto para contexto adicional
-
-### Booster_Storage
-Ferramenta para armazenamento estruturado de conclusões.
-
-**Parâmetros obrigatórios:**
-- `projectPath`: Caminho absoluto do diretório do projeto
-- `WhyChange`: Motivo da mudança (por que foi necessária)
-- `WhatChange`: Descrição da mudança (o que foi modificado)
-
-**Parâmetros opcionais:**
-- `category`: Categoria principal da mudança
-- `impactLevel`: Nível de impacto (low/medium/high)
-- `affectedFiles`: Lista de arquivos afetados
-- `tags`: Tags para organização
-- `technicalContext`: Contexto técnico adicional
-
-## Integração com Cursor IDE
-
-Para usar com Cursor IDE, adicione ao seu `cursor-mcp.json`:
+1. Instale o MCP-Booster globalmente
+2. Configure no Cursor IDE:
 
 ```json
 {
@@ -192,7 +81,31 @@ Para usar com Cursor IDE, adicione ao seu `cursor-mcp.json`:
 }
 ```
 
-## Desenvolvimento
+## 🔧 Configuração
+
+### Variáveis de Ambiente
+
+```bash
+# Linux/macOS
+export MCP_BOOSTER_API_KEY="your_api_key_here"
+export MCP_BOOSTER_LOG_LEVEL="info"
+
+# Windows
+set MCP_BOOSTER_API_KEY=your_api_key_here
+set MCP_BOOSTER_LOG_LEVEL=info
+```
+
+### Argumentos de Linha de Comando
+
+```bash
+mcp-booster --api-key YOUR_KEY    # Define API key
+mcp-booster --help               # Mostra ajuda
+mcp-booster --version            # Mostra versão
+```
+
+## 🛠️ Desenvolvimento Local
+
+Se você quiser contribuir ou rodar em modo de desenvolvimento:
 
 ```bash
 # Clonar repositório
@@ -202,63 +115,163 @@ cd mcp-booster
 # Instalar dependências
 npm install
 
-# Desenvolvimento
-npm run dev -- --api-key YOUR_API_KEY
-
-# Build
+# Build do projeto
 npm run build
 
-# Executar versão compilada
-npm start -- --api-key YOUR_API_KEY
+# Executar em modo desenvolvimento
+npm run dev
+
+# Executar testes
+npm test
 ```
 
-## Estrutura do Projeto
+## 🧪 Testando Compatibilidade
 
-```
-mcp-booster/
-├── src/
-│   ├── modules/
-│   │   ├── types.ts          # Definições de tipos
-│   │   ├── logger.ts         # Sistema de logging
-│   │   ├── storage.ts        # Armazenamento de dados
-│   │   ├── coconut.ts        # Lógica do Booster
-│   │   └── coconut-storage.ts # Lógica do Storage
-│   ├── config.ts             # Configurações
-│   └── index.ts              # Servidor principal
-├── bin/
-│   └── server.js             # Script de linha de comando
-├── dist/                     # Arquivos compilados
-└── coconut-data/             # Dados persistidos
+Execute os testes de compatibilidade multi-plataforma:
+
+```bash
+# Após instalação global
+npm test -g mcp-booster
+
+# Em projeto local
+npm test
 ```
 
-## Requisitos
+## 🔍 Solução de Problemas
 
-- Node.js 18 ou superior
-- NPM
-- API Key válida do LLM Booster
+### Problema: Comando não encontrado
 
-## Contribuição
+**Linux/macOS:**
+```bash
+# Verificar se NPM global bin está no PATH
+echo $PATH | grep npm
 
-Contribuições são bem-vindas! Para contribuir:
+# Adicionar ao PATH se necessário
+export PATH=$PATH:$(npm root -g)/../bin
+```
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
+**Windows:**
+```cmd
+# Verificar PATH
+echo %PATH%
+
+# Reinstalar se necessário
+npm uninstall -g mcp-booster
+npm install -g mcp-booster
+```
+
+### Problema: Permissões negadas (Linux/macOS)
+
+```bash
+# Corrigir permissões NPM
+sudo chown -R $(whoami) $(npm config get prefix)/{lib/node_modules,bin,share}
+
+# Ou usar npx
+npx mcp-booster
+```
+
+### Problema: Erro de importação
+
+```bash
+# Limpar cache NPM
+npm cache clean --force
+
+# Reinstalar
+npm uninstall -g mcp-booster
+npm install -g mcp-booster
+```
+
+### Problema: Versão do Node.js
+
+```bash
+# Verificar versão
+node --version
+
+# Atualizar Node.js para ≥ 18.0.0
+# Use nvm, fnm ou baixe do site oficial
+```
+
+## 📚 Funcionalidades Principais
+
+### 🧠 Sistema Booster
+- Raciocínio contínuo em cadeia
+- Análise automática de qualidade
+- Controle de ramificações
+
+### 📊 Booster_Analyser
+- Validação de cadeia de pensamentos
+- Detecção de necessidade de informações adicionais
+- Sugestões de melhoria
+
+### 💾 Booster_Storage
+- Armazenamento estruturado de conclusões
+- Metadados ricos para busca
+- Histórico de modificações
+
+### 🔧 Booster_Steps
+- Decomposição inteligente de tarefas
+- Planejamento estruturado
+- Cards otimizados para IA
+
+## 🌍 Suporte Multi-plataforma
+
+Este pacote foi testado e otimizado para:
+
+| Sistema | Arquitetura | Status | Notas |
+|---------|-------------|--------|-------|
+| Windows 10/11 | x64 | ✅ | Testado em PowerShell e CMD |
+| Windows 10/11 | arm64 | ✅ | Compatível com ARM |
+| macOS 12+ | x64 | ✅ | Testado em Intel Macs |
+| macOS 12+ | arm64 | ✅ | Testado em Apple Silicon |
+| Ubuntu 20.04+ | x64 | ✅ | Testado em bash e zsh |
+| Ubuntu 20.04+ | arm64 | ✅ | Compatível com ARM |
+
+## 🔄 Atualização
+
+```bash
+# Atualizar para versão mais recente
+npm update -g mcp-booster
+
+# Verificar atualizações disponíveis
+npm outdated -g mcp-booster
+```
+
+## 🗑️ Desinstalação
+
+```bash
+# Remover instalação global
+npm uninstall -g mcp-booster
+
+# Verificar remoção
+npm list -g | grep mcp-booster
+```
+
+## 📄 Licença
+
+MIT License - veja [LICENSE](LICENSE) para detalhes.
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
 5. Abra um Pull Request
 
-## Licença
+## 📞 Suporte
 
-ISC
+- **Issues**: [GitHub Issues](https://github.com/llm-booster/mcp-booster/issues)
+- **Documentação**: [Wiki](https://github.com/llm-booster/mcp-booster/wiki)
+- **Discussões**: [GitHub Discussions](https://github.com/llm-booster/mcp-booster/discussions)
 
-## Links Úteis
+## 📊 Status
 
-- [Documentação da API](https://llmbooster.com/docs)
-- [Model Context Protocol](https://modelcontextprotocol.io)
-- [Cursor IDE](https://cursor.sh)
+- ✅ Instalação global NPM
+- ✅ Compatibilidade multi-plataforma
+- ✅ Testes automatizados
+- ✅ TypeScript completo
+- ✅ Documentação abrangente
 
-## Suporte
+---
 
-Para suporte técnico ou dúvidas:
-- [Issues no GitHub](https://github.com/llm-booster/mcp-booster/issues)
-- [Documentação completa](https://llmbooster.com/docs) 
+**Feito com ❤️ pela equipe LLM Booster** 

@@ -20,3 +20,6 @@ booster-data
 
 # patch notes
 PATCH_NOTES_MCP.md
+
+# tgz
+*.tgz
