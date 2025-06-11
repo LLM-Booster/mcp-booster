@@ -5,11 +5,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CoConuTService } from "./modules/coconut";
+import { BoosterStepsService } from "./modules/booster-steps";
 import {
   CoConuTParams,
   CoConuTParamsSchema,
   CoConuTStorageParams,
   CoConuTStorageParamsSchema,
+  BoosterStepsParams,
+  BoosterStepsParamsSchema,
   ThoughtEntry,
   EventType,
   EventData,
@@ -38,6 +41,9 @@ let server: McpServer | null = null;
 
 // Instância do serviço CoConuT_Storage
 let coconutService: CoConuTService | null = null;
+
+// Instância do serviço Booster_Steps
+let boosterStepsService: BoosterStepsService | null = null;
 
 // Estado global para as funções lambda
 let coconutState: CoConuTState = {
@@ -125,6 +131,27 @@ interface AnalyserOutput {
   userInfoNeeded?: string[];
   suggestions?: string[];
   metadata?: Record<string, any>;
+}
+
+/**
+ * Tipos de erro de verificação LLMBooster
+ */
+enum VerificationErrorType {
+  NONE = 'none',
+  API_KEY = 'api_key',
+  VERSION = 'version',
+  NETWORK = 'network',
+  UNKNOWN = 'unknown'
+}
+
+/**
+ * Resultado da verificação LLMBooster
+ */
+interface VerificationResult {
+  success: boolean;
+  errorType: VerificationErrorType;
+  statusCode?: number;
+  message?: string;
 }
 
 /**
@@ -275,6 +302,9 @@ function setupServer() {
     persistenceEnabled: true
     // Sem projectPath - o modelo deve fornecer em cada interação
   });
+
+  // Inicializar o serviço Booster_Steps
+  boosterStepsService = new BoosterStepsService();
 
   // Log de configuração aplicada
   logger.info("Configuração do CoConuT:", {
@@ -554,6 +584,79 @@ function setupCoConuTTools() {
       }
     }
   );
+
+  // Implementação da ferramenta Booster_Steps
+  server.tool(
+    "Booster_Steps",
+    BoosterStepsParamsSchema.shape,
+    async (params: BoosterStepsParams) => {
+      try {
+        // Validar se o serviço foi inicializado
+        if (!boosterStepsService) {
+          throw new Error("Booster_Steps service not initialized");
+        }
+
+        // Validar parâmetros obrigatórios
+        if (!params.title || params.title.trim().length < 3) {
+          throw new Error("Task title must be at least 3 characters long");
+        }
+
+        if (!params.taskDescription || params.taskDescription.trim().length < 10) {
+          throw new Error("Task description must be at least 10 characters long");
+        }
+
+        if (!params.projectPath || params.projectPath.trim().length < 1) {
+          throw new Error("Project path is required and cannot be empty");
+        }
+
+        if (!params.steps || params.steps.length === 0) {
+          throw new Error("At least one step must be provided");
+        }
+
+        // Processar a tarefa
+        const result = await boosterStepsService.processTask(params);
+
+        // Retornar resposta no formato esperado pelo MCP
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }],
+          _meta: {
+            description: "Ferramenta para decomposição de tarefas em passos menores e gerenciáveis",
+            readOnly: false,
+            category: "planning",
+            descriptionShort: "Decompõe tarefas complexas em passos menores, organizados e priorizados",
+            descriptionLong: "Permite que modelos de linguagem decomponham tarefas complexas em uma série de passos menores, mais gerenciáveis e organizados. A ferramenta analisa a descrição da tarefa, identifica o tipo (desenvolvimento, pesquisa, design, teste, deployment), considera a complexidade e gera um plano estruturado com passos sequenciais, dependências, estimativas de tempo, prioridades e recomendações. Opcionalmente salva o plano em arquivo markdown para referência futura. Inclui análise de fatores de risco e sugestões para otimizar a execução.",
+            requiresUserAction: params.projectPath ? true : false,
+            schemaVersion: config.server.protocolVersion
+          }
+        };
+      } catch (error: any) {
+        logger.error("Error in Booster_Steps tool", { error });
+
+        // Criar mensagem de erro simples
+        const simpleErrorMessage = error.message || 'An error occurred while processing the task decomposition.';
+
+        // Retornar erro em formato compatível
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: simpleErrorMessage,
+              taskTitle: params.taskDescription ? params.taskDescription.substring(0, 50) + '...' : 'Unknown Task',
+              totalSteps: 0,
+              steps: [],
+              summary: `Error processing task: ${simpleErrorMessage}`,
+              recommendations: ['Fix the error and try again'],
+              riskFactors: ['Task processing failed']
+            }, null, 2)
+          }]
+        };
+      }
+    }
+  );
 }
 
 /**
@@ -577,6 +680,47 @@ function setupSignalHandlers() {
 export interface ServerOptions {
   apiKey?: string;
   config?: Partial<Config>;
+}
+
+/**
+ * Abre o changelog do LLMBooster no navegador padrão
+ * @param useLogger Se deve usar o logger para exibir mensagens (se false, usa console)
+ */
+async function openLLMBoosterChangelog(useLogger = true): Promise<void> {
+  const url = 'https://llmbooster.com/changelog?update=true';
+
+  // Verificar se o redirecionamento automático está habilitado
+  if (!config.api.autoRedirectOnError) {
+    const message = `Por favor, visite ${url} para ver as atualizações disponíveis`;
+
+    if (useLogger && logger) {
+      logger.warn(message);
+    } else {
+      console.warn(`\n⚠️  ${message}\n`);
+    }
+    return;
+  }
+
+  try {
+    const message = `Redirecionando para ${url} para ver as atualizações disponíveis`;
+
+    if (useLogger && logger) {
+      logger.info(message);
+    } else {
+      console.log(`\n\n📢  ${message}...\n`);
+    }
+
+    // Abrir o URL no navegador padrão
+    await open(url);
+  } catch (error) {
+    const errorMessage = `Não foi possível abrir o navegador automaticamente. Por favor, visite ${url} para ver as atualizações disponíveis`;
+
+    if (useLogger && logger) {
+      logger.error(errorMessage);
+    } else {
+      console.error(`\n❌  ${errorMessage}\n`);
+    }
+  }
 }
 
 /**
@@ -625,39 +769,86 @@ async function openLLMBoosterWebsite(reason: string, useLogger = true): Promise<
 }
 
 /**
- * Verifica se a API key é válida fazendo uma chamada para o endpoint de verificação
+ * Verifica se a API key é válida e se há novas versões disponíveis fazendo uma chamada para o endpoint de verificação
  * @param useLogger Se deve usar o logger para exibir mensagens (se false, usa console)
- * @returns Promise<boolean> True se a API key for válida, False caso contrário
+ * @returns Promise<VerificationResult> Resultado da verificação com tipo de erro específico
  */
-async function verifyApiKey(useLogger = true): Promise<boolean> {
+async function verifyLLMBooster(useLogger = true): Promise<VerificationResult> {
   const apiKey = getApiKey();
 
   if (!apiKey) {
-    return false;
+    return {
+      success: false,
+      errorType: VerificationErrorType.API_KEY,
+      message: 'API key não configurada'
+    };
   }
 
   try {
-    // Preparar cabeçalhos com a API key
+    // Preparar cabeçalhos com a API key e Content-Type
     const headers: Record<string, string> = {
-      'Authorization': `Bearer ${apiKey}`
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
     };
+
+    // Preparar o body com a versão atual do servidor
+    const body = JSON.stringify({
+      version: config.server.version
+    });
 
     // Fazer a chamada ao endpoint de verificação
     const response = await fetch('https://api.llmbooster.com', {
       method: 'POST',
-      headers
+      headers,
+      body
     });
 
-    // Verificar se a resposta foi bem-sucedida (código 2xx)
-    return response.ok;
-  } catch (error) {
-    // Em caso de erro na chamada (problema de rede, etc.), retornar false
-    if (useLogger && logger) {
-      logger.error('Erro ao verificar API key', { error });
+    // Analisar resposta baseada no código de status
+    if (response.ok) {
+      // Sucesso
+      return {
+        success: true,
+        errorType: VerificationErrorType.NONE,
+        statusCode: response.status
+      };
+    } else if (response.status === 401 || response.status === 403) {
+      // Erro de API key inválida
+      return {
+        success: false,
+        errorType: VerificationErrorType.API_KEY,
+        statusCode: response.status,
+        message: 'API key inválida ou sem permissões'
+      };
+    } else if (response.status === 426) {
+      // Versão desatualizada (Upgrade Required)
+      return {
+        success: false,
+        errorType: VerificationErrorType.VERSION,
+        statusCode: response.status,
+        message: 'Versão do servidor desatualizada'
+      };
     } else {
-      console.error('Erro ao verificar API key:', error);
+      // Outro tipo de erro
+      return {
+        success: false,
+        errorType: VerificationErrorType.UNKNOWN,
+        statusCode: response.status,
+        message: `Erro HTTP ${response.status}`
+      };
     }
-    return false;
+  } catch (error) {
+    // Em caso de erro na chamada (problema de rede, etc.)
+    if (useLogger && logger) {
+      logger.error('Erro ao verificar LLMBooster', { error });
+    } else {
+      console.error('Erro ao verificar LLMBooster:', error);
+    }
+
+    return {
+      success: false,
+      errorType: VerificationErrorType.NETWORK,
+      message: 'Erro de rede ou conexão'
+    };
   }
 }
 
@@ -709,14 +900,32 @@ export async function initializeServer(options: ServerOptions = {}): Promise<voi
 
       // Verificar se a API key é válida
       logger.info("Verificando validade da API key...");
-      const isValid = await verifyApiKey();
+      const verificationResult = await verifyLLMBooster();
 
-      if (isValid) {
+      if (verificationResult.success) {
         logger.info("API Key verificada com sucesso!");
       } else {
-        logger.error("API Key inválida ou erro na verificação. As chamadas à API podem falhar.");
-        // Redirecionar para o site llmbooster.com em caso de API key inválida
-        await openLLMBoosterWebsite('resolver problemas com sua API key atual', true);
+        // Tratar diferentes tipos de erro
+        switch (verificationResult.errorType) {
+          case VerificationErrorType.API_KEY:
+            logger.error(`Erro de API key: ${verificationResult.message}. As chamadas à API podem falhar.`);
+            await openLLMBoosterWebsite('resolver problemas com sua API key atual', true);
+            break;
+
+          case VerificationErrorType.VERSION:
+            logger.warn(`Nova versão disponível: ${verificationResult.message}. Considere atualizar para a versão mais recente.`);
+            await openLLMBoosterChangelog(true);
+            break;
+
+          case VerificationErrorType.NETWORK:
+            logger.error(`Erro de rede: ${verificationResult.message}. Verifique sua conexão com a internet.`);
+            break;
+
+          default:
+            logger.error(`Erro na verificação: ${verificationResult.message}. As chamadas à API podem falhar.`);
+            await openLLMBoosterWebsite('resolver problemas com o serviço', true);
+            break;
+        }
       }
     }
 

@@ -75,6 +75,7 @@ export interface CoConuTParams {
     options?: string[];
     numberArray?: number[];
     Call_Booster_Analyser: boolean;
+    Call_Booster_Steps: boolean;
 }
 
 /**
@@ -84,6 +85,9 @@ export interface CoConuTResponse {
     thoughtNumber: number;
     totalThoughts: number;
     nextThoughtNeeded: boolean;
+
+    // Recomendação para usar Booster_Steps (opcional)
+    stepsRecommended?: boolean;
 
     // Análise (opcional)
     analysis?: {
@@ -116,7 +120,8 @@ export const CoConuTParamsSchema = z.object({
     problemStatus: z.string().describe("Description of the current status of problem solving"),
     options: z.array(z.string()).optional().describe("List of options for the user to choose from"),
     numberArray: z.array(z.number()).optional().describe("Array of numbers provided as input"),
-    Call_Booster_Analyser: z.boolean().describe("Indicates if the Booster_Analyser should be called")
+    Call_Booster_Analyser: z.boolean().describe("Indicates if the Booster_Analyser should be called"),
+    Call_Booster_Steps: z.boolean().describe("Indicates if the Booster_Steps should be called")
 });
 
 /**
@@ -245,4 +250,140 @@ export enum ErrorCode {
     INVALID_INPUT = 'INVALID_INPUT',
     INVALID_STATE = 'INVALID_STATE',
     INTERNAL_ERROR = 'INTERNAL_ERROR'
-} 
+}
+
+/**
+ * Parâmetros para a ferramenta Booster_Steps
+ */
+export interface BoosterStepsParams {
+    title: string;                 // Título da tarefa para nome do arquivo
+    taskDescription: string;        // Descrição geral da tarefa/projeto
+    projectPath: string;           // Caminho do projeto para salvar os cards (OBRIGATÓRIO)
+    steps: TaskStep[];             // Array de steps detalhados fornecidos pelo modelo
+}
+
+/**
+ * Estrutura de um passo individual (Card Template) - Otimizado para processamento por AIs
+ */
+export interface TaskStep {
+    // === IDENTIFICAÇÃO E BÁSICOS ===
+    id: string;                    // ID único do card (ex: "TASK-001")
+    title: string;                 // Título técnico da tarefa
+
+    // === INFORMAÇÕES PARA AI ===
+    // Contexto técnico e objetivo
+    technicalContext: string;      // Contexto técnico detalhado para o AI entender o problema
+    implementationGoal: string;    // Objetivo específico de implementação
+
+    // Especificações técnicas
+    targetFiles: string[];         // Arquivos que devem ser modificados/criados
+    referencePaths: string[];      // Caminhos de arquivos/diretórios para referência
+    codePatterns: string[];        // Padrões de código específicos a seguir
+    technicalRequirements: string[]; // Requisitos técnicos específicos
+
+    // Comandos e ações
+    shellCommands: string[];       // Comandos de terminal necessários
+    installationSteps: string[];   // Passos de instalação/configuração
+    verificationSteps: string[];   // Como verificar se foi implementado corretamente
+
+    // Dependências técnicas
+    codeDependencies: string[];    // Dependências de código/bibliotecas
+    serviceDependencies: string[]; // Dependências de serviços/APIs
+
+    // === INFORMAÇÕES EDITÁVEIS PELO USUÁRIO ===
+    userNotes?: string;            // IMPORTANTE: Notas completas do usuário - incluindo instruções especiais, contexto do projeto, preferências de implementação, avisos, justificativas de negócio e qualquer informação relevante do usuário
+
+    // === INFORMAÇÕES EDITÁVEIS PELA AI ===
+    aiNotes?: string;              // Notas específicas da AI para esta tarefa
+
+    // === METADADOS TÉCNICOS ===
+    complexity: 'low' | 'medium' | 'high' | 'expert'; // Complexidade técnica
+    estimatedLines?: number;       // Linhas de código estimadas
+    testingStrategy?: string;      // Estratégia de testes recomendada
+    rollbackPlan?: string;         // Plano de rollback se necessário
+
+    // === CAMPOS OPCIONAIS PARA CONTEXTO ADICIONAL ===
+    relatedIssues?: string[];      // Issues relacionadas
+    apiEndpoints?: string[];       // Endpoints de API envolvidos
+    databaseChanges?: string[];    // Mudanças no banco de dados
+    environmentVars?: string[];    // Variáveis de ambiente necessárias
+    securityConsiderations?: string[]; // Considerações de segurança
+    performanceConsiderations?: string[]; // Considerações de performance
+    accessibilityNotes?: string[]; // Notas sobre acessibilidade
+    monitoringAndLogs?: string[];  // Monitoring e logs necessários
+}
+
+/**
+ * Resposta da ferramenta Booster_Steps
+ */
+export interface BoosterStepsResponse {
+    taskTitle: string;             // Título da tarefa original
+    totalSteps: number;            // Número total de passos
+    steps: TaskStep[];             // Lista de passos
+    summary: string;               // Resumo do plano
+    recommendations?: string[];    // Recomendações adicionais
+    riskFactors?: string[];        // Fatores de risco identificados
+    savedFilePath?: string;        // Caminho do arquivo salvo (se aplicável)
+}
+
+/**
+ * Esquema Zod para validação de um TaskStep - Otimizado para AIs
+ */
+export const TaskStepSchema = z.object({
+    // === IDENTIFICAÇÃO E BÁSICOS ===
+    id: z.string().describe("Unique ID for the card (e.g., 'TASK-001')"),
+    title: z.string().describe("Technical title of the task"),
+
+    // === INFORMAÇÕES PARA AI (OBRIGATÓRIAS) ===
+    technicalContext: z.string().describe("Detailed technical context for AI to understand the problem"),
+    implementationGoal: z.string().describe("Specific implementation objective"),
+
+    // Especificações técnicas
+    targetFiles: z.array(z.string()).describe("Files that should be modified/created"),
+    referencePaths: z.array(z.string()).describe("Paths to files/directories for reference"),
+    codePatterns: z.array(z.string()).describe("Specific code patterns to follow"),
+    technicalRequirements: z.array(z.string()).describe("Specific technical requirements"),
+
+    // Comandos e ações
+    shellCommands: z.array(z.string()).describe("Required terminal commands"),
+    installationSteps: z.array(z.string()).describe("Installation/configuration steps"),
+    verificationSteps: z.array(z.string()).describe("How to verify correct implementation"),
+
+    // Dependências técnicas
+    codeDependencies: z.array(z.string()).describe("Code/library dependencies"),
+    serviceDependencies: z.array(z.string()).describe("Service/API dependencies"),
+
+    // === METADADOS TÉCNICOS (OBRIGATÓRIOS) ===
+    complexity: z.enum(['low', 'medium', 'high', 'expert']).describe("Technical complexity level"),
+
+    // === INFORMAÇÕES EDITÁVEIS PELO USUÁRIO (OPCIONAIS) ===
+    userNotes: z.string().optional().describe("IMPORTANT: Complete user notes including special instructions, project context, implementation preferences, warnings, business rationale and any relevant user information"),
+
+    // === INFORMAÇÕES EDITÁVEIS PELA AI (OPCIONAIS) ===
+    aiNotes: z.string().optional().describe("AI specific notes for this task"),
+
+    // === METADADOS TÉCNICOS OPCIONAIS ===
+    estimatedLines: z.number().optional().describe("Estimated lines of code"),
+    testingStrategy: z.string().optional().describe("Recommended testing strategy"),
+    rollbackPlan: z.string().optional().describe("Rollback plan if needed"),
+
+    // === CAMPOS OPCIONAIS PARA CONTEXTO ADICIONAL ===
+    relatedIssues: z.array(z.string()).optional().describe("Related issues"),
+    apiEndpoints: z.array(z.string()).optional().describe("API endpoints involved"),
+    databaseChanges: z.array(z.string()).optional().describe("Database changes"),
+    environmentVars: z.array(z.string()).optional().describe("Required environment variables"),
+    securityConsiderations: z.array(z.string()).optional().describe("Security considerations"),
+    performanceConsiderations: z.array(z.string()).optional().describe("Performance considerations"),
+    accessibilityNotes: z.array(z.string()).optional().describe("Accessibility notes"),
+    monitoringAndLogs: z.array(z.string()).optional().describe("Required monitoring and logs")
+});
+
+/**
+ * Esquema Zod para validação de parâmetros do Booster_Steps
+ */
+export const BoosterStepsParamsSchema = z.object({
+    title: z.string().min(3).max(100).describe("Title of the task for the filename. Should be descriptive and filesystem-safe."),
+    taskDescription: z.string().min(10).describe("General description of the task/project that will be broken down into detailed cards."),
+    projectPath: z.string().min(1).describe("Path to the project directory where the step cards will be saved. This parameter is required."),
+    steps: z.array(TaskStepSchema).min(1).describe("Array of detailed step cards provided by the model. Each step should follow the card template structure.")
+}); 

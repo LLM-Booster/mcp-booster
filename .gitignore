@@ -17,3 +17,6 @@ dist
 # data
 coconut-data
 booster-data
+
+# patch notes
+PATCH_NOTES_MCP.md
