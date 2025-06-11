@@ -32,8 +32,10 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "@types/express": "^5.0.3",
     "@types/node": "^22.15.0",
     "@types/string-similarity": "^4.0.2",
+    "express": "^5.1.0",
     "open": "^10.1.2",
     "string-similarity": "^4.0.4",
     "zod": "^3.24.3"
