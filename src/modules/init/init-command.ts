@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { parseCliArguments, getHelpMessage, sanitizeApiKey, ParseResult } from './cli-parser';
-import { detectCursorPaths, isCursorInstalled, ensureCursorDirectories, getCursorSystemInfo } from './os-detector';
+import { detectCursorPaths, isCursorInstalled, ensureCursorDirectories, getCursorSystemInfo, detectOS } from './os-detector';
 import { installMcpBoosterConfig, ConfigResult } from './mcp-config';
 import { createCursorRules, type CursorRulesConfig, type CursorRulesResult } from './cursor-rules';
 
@@ -20,18 +20,60 @@ export interface InitResult {
 }
 
 /**
+ * Shows support information when errors occur
+ */
+function showSupportInfo(): void {
+    console.log('');
+    console.log('🆘 Precisa de ajuda?');
+    console.log('   Nossa equipe de suporte está pronta para ajudar!');
+    console.log('   📧 Entre em contato: https://llmbooster.com/suporte');
+    console.log('   ⏰ Horário de atendimento: Segunda a Sexta, 9h às 18h');
+    console.log('');
+}
+
+/**
+ * Determines which systemPrompt file to use based on the operating system
+ */
+function getSystemPromptPath(): string {
+    const fs = require('fs');
+    const currentOS = detectOS();
+    
+    // Define paths for different system prompts
+    const windowsPromptPath = path.join(__dirname, '../../../systemPrompt-Windows.md');
+    const defaultPromptPath = path.join(__dirname, '../../../systemPrompt.md');
+    
+    // Use Windows-specific prompt if on Windows and file exists
+    if (currentOS === 'windows' && fs.existsSync(windowsPromptPath)) {
+        if (process.env.DEBUG) {
+            console.log('🪟 [DEBUG] Using Windows-specific system prompt');
+        }
+        return windowsPromptPath;
+    }
+    
+    // Fallback to default prompt
+    if (process.env.DEBUG) {
+        console.log(`🔍 [DEBUG] Using default system prompt for OS: ${currentOS}`);
+    }
+    return defaultPromptPath;
+}
+
+/**
  * Shows system information for debugging
  */
 function showSystemInfo(): void {
     const systemInfo = getCursorSystemInfo();
+    const currentOS = detectOS();
+    const systemPromptPath = getSystemPromptPath();
 
     console.log('\n🔍 System Information:');
     console.log(`   Platform: ${systemInfo.platform}`);
+    console.log(`   Detected OS: ${currentOS}`);
     console.log(`   Architecture: ${systemInfo.arch}`);
     console.log(`   Node.js: ${systemInfo.nodeVersion}`);
     console.log(`   Cursor Installed: ${systemInfo.cursorInstalled ? '✅ Yes' : '❌ No'}`);
     console.log(`   Global MCP Path: ${systemInfo.paths.globalPath}`);
     console.log(`   Local Cursor Rules Path: ${systemInfo.paths.localPath}`);
+    console.log(`   System Prompt: ${path.basename(systemPromptPath)}`);
 }
 
 /**
@@ -58,6 +100,8 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
             console.error(`❌ ${parseResult.error}`);
             if (parseResult.showHelp) {
                 console.log(getHelpMessage());
+            } else {
+                showSupportInfo();
             }
             return {
                 success: false,
@@ -93,7 +137,8 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
             const installResult: ConfigResult = installMcpBoosterConfig(mcpConfigPath, sanitizedApiKey);
 
             // Local Cursor Rules creation
-            const systemPromptPath = path.join(process.cwd(), 'systemPrompt.md');
+            // Use appropriate systemPrompt based on OS (Windows gets Windows-specific version)
+            const systemPromptPath = getSystemPromptPath();
             const cursorRulesConfig: CursorRulesConfig = {
                 projectPath: process.cwd(),
                 systemPromptPath: systemPromptPath
@@ -108,9 +153,31 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
                 console.log('📦 What was installed:');
                 console.log('   • MCP-Booster Server (global)');
                 if (cursorRulesResult.success) {
+                    const currentOS = detectOS();
+                    const promptFileName = path.basename(systemPromptPath);
                     console.log('   • Cursor Rules (current project)');
+                    console.log(`     ↳ OS: ${currentOS} → Using: ${promptFileName}`);
+                    
+                    // Mostrar detalhes do arquivo criado se disponível
+                    if (cursorRulesResult.details && cursorRulesResult.details.fileSize) {
+                        console.log(`     ↳ File: ${cursorRulesResult.filePath}`);
+                        console.log(`     ↳ Size: ${cursorRulesResult.details.fileSize} bytes`);
+                        console.log(`     ↳ Permissions: ${cursorRulesResult.details.permissions || 'Unknown'}`);
+                    }
                 } else {
-                    console.log('   • Cursor Rules (failed - check systemPrompt.md)');
+                    console.log('   • Cursor Rules (failed - see details below)');
+                    console.log('');
+                    console.error('❌ Cursor Rules Creation Failed:');
+                    console.error(`   Error: ${cursorRulesResult.error || 'Unknown error'}`);
+                    console.error(`   Message: ${cursorRulesResult.message}`);
+                    
+                    if (cursorRulesResult.filePath) {
+                        console.error(`   Target Path: ${cursorRulesResult.filePath}`);
+                    }
+                    
+                    console.log('');
+                    
+                    showSupportInfo();
                 }
 
                 console.log('\n🔄 Next step:');
@@ -129,6 +196,7 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
 
             } else {
                 console.error(`❌ Installation failed: ${installResult.message}`);
+                showSupportInfo();
                 return {
                     success: false,
                     message: installResult.message,
@@ -139,6 +207,7 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(`❌ Error during installation: ${errorMessage}`);
+            showSupportInfo();
 
             return {
                 success: false,
@@ -150,6 +219,7 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ Unexpected error: ${errorMessage}`);
+        showSupportInfo();
 
         return {
             success: false,
@@ -171,6 +241,7 @@ export async function runInitCommand(argv: string[]): Promise<void> {
         }
     } catch (error) {
         console.error('❌ Fatal error:', error instanceof Error ? error.message : String(error));
+        showSupportInfo();
         process.exit(1);
     }
 }
@@ -192,13 +263,10 @@ export function validateSystemRequirements(): {
         issues.push(`Node.js version ${nodeVersion} is too old. Requires Node.js 16 or higher.`);
     }
 
-    // Check if in a project directory
+    // Check if in a project directory  
     const hasPackageJson = require('fs').existsSync(path.join(process.cwd(), 'package.json'));
-    const hasSystemPrompt = require('fs').existsSync(path.join(process.cwd(), 'systemPrompt.md'));
-
-    if (!hasSystemPrompt) {
-        issues.push('systemPrompt.md file not found in current directory.');
-    }
+    
+    // Note: systemPrompt.md is now bundled with the package, not required in user's directory
 
     return {
         valid: issues.length === 0,

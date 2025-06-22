@@ -29,6 +29,7 @@ import {
   getApiKey,
   Config
 } from "./config";
+import { PathUtils } from "./modules/utils/cache";
 import { FormatterFactory } from "./modules/formatters";
 import { z } from "zod";
 import open from 'open';
@@ -403,9 +404,12 @@ function setupCoConuTTools() {
           throw new Error("The change description cannot be empty");
         }
 
+        // Decodificar o projectPath para resolver problemas de URL encoding no Windows
+        const decodedProjectPath = PathUtils.normalizePath(params.projectPath);
+
         // Chamar o método saveWithStorage do serviço CoConuT com todos os parâmetros
         const savedFiles = await service.saveWithStorage(
-          params.projectPath,
+          decodedProjectPath,
           params.WhyChange,
           params.WhatChange,
           {
@@ -427,7 +431,7 @@ function setupCoConuTTools() {
 
         // Iniciar armazenamento de interações futuras se configurado
         if (config.coconut.persistenceEnabled) {
-          coconutService?.setProjectPath(params.projectPath);
+          coconutService?.setProjectPath(decodedProjectPath);
         }
 
         // Construir resultado da operação
@@ -535,11 +539,13 @@ function setupCoConuTTools() {
       // Se chegou até aqui, significa que thoughts está válido conforme ThoughtEntrySchema
 
       try {
+        // Decodificar o projectPath se fornecido para resolver problemas de URL encoding no Windows
+        const decodedProjectPath = params.projectPath ? PathUtils.normalizePath(params.projectPath) : undefined;
 
         // Chamar o endpoint externo
         const result = await callCoConuTAnalyserEndpoint(
           params.thoughts,
-          params.projectPath,
+          decodedProjectPath,
           params.userQuery
         );
 
@@ -613,8 +619,14 @@ function setupCoConuTTools() {
           throw new Error("At least one step must be provided");
         }
 
+        // Decodificar o projectPath para resolver problemas de URL encoding no Windows
+        const decodedParams = {
+          ...params,
+          projectPath: PathUtils.normalizePath(params.projectPath)
+        };
+
         // Processar a tarefa
-        const result = await boosterStepsService.processTask(params);
+        const result = await boosterStepsService.processTask(decodedParams);
 
         // Retornar resposta no formato esperado pelo MCP
         return {

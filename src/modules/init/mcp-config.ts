@@ -2,6 +2,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
+ * Shows support information when errors occur
+ */
+function showSupportInfo(): void {
+    console.log('');
+    console.log('🆘 Precisa de ajuda?');
+    console.log('   Nossa equipe de suporte está pronta para ajudar!');
+    console.log('   📧 Entre em contato: https://llmbooster.com/suporte');
+    console.log('   ⏰ Horário de atendimento: Segunda a Sexta, 9h às 18h');
+    console.log('');
+}
+
+/**
  * Interface para definir a estrutura de um servidor MCP
  */
 export interface McpServer {
@@ -144,10 +156,14 @@ export function installMcpBoosterConfig(configPath: string, apiKey: string): Con
         return result;
 
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('❌ Erro crítico na configuração MCP:', errorMessage);
+        showSupportInfo();
+        
         return {
             success: false,
             message: '❌ Erro ao instalar configuração MCP',
-            error: error instanceof Error ? error.message : String(error)
+            error: errorMessage
         };
     }
 }
@@ -238,10 +254,14 @@ export function uninstallMcpBoosterConfig(configPath: string): ConfigResult {
         return writeMcpConfig(configPath, existingConfig);
 
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('❌ Erro ao remover configuração MCP:', errorMessage);
+        showSupportInfo();
+        
         return {
             success: false,
             message: '❌ Erro ao remover configuração MCP',
-            error: error instanceof Error ? error.message : String(error)
+            error: errorMessage
         };
     }
 } 

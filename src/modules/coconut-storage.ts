@@ -8,6 +8,7 @@ import * as path from 'path';
 import { ThoughtEntry, CoConuTConfig, SavedFileInfo, CoConuTStorageParams } from './types';
 import { Logger } from './logger';
 import { StorageProvider } from './storage';
+import { PathUtils } from './utils/cache';
 
 /**
  * Interface para metadados de conclusão
@@ -259,13 +260,16 @@ export class CoConuT_Storage {
                 throw new Error(this.t('error.no.path'));
             }
 
+            // Decodificar o projectPath para resolver problemas de URL encoding no Windows
+            const normalizedProjectPath = PathUtils.normalizePath(projectPath);
+
             // Atualizar o caminho do projeto na configuração
-            this.config.projectPath = projectPath;
+            this.config.projectPath = normalizedProjectPath;
 
             // Mesclar parâmetros recebidos
             const fullParams: Partial<CoConuTStorageParams> = {
                 ...params,
-                projectPath,
+                projectPath: normalizedProjectPath,
                 WhyChange: whyChange,
                 WhatChange: whatChange
             };
@@ -304,7 +308,7 @@ export class CoConuT_Storage {
             }
 
             // Registrar a conclusão em um arquivo separado
-            const conclusionFileInfo = await this.saveConclusion(conclusion, projectPath);
+            const conclusionFileInfo = await this.saveConclusion(conclusion, normalizedProjectPath);
             if (conclusionFileInfo) {
                 savedFiles.push(conclusionFileInfo);
             }
@@ -337,6 +341,9 @@ export class CoConuT_Storage {
                 throw new Error("A path must be provided to save the interaction summary");
             }
 
+            // Decodificar o projectPath para resolver problemas de URL encoding no Windows
+            const normalizedProjectPath = PathUtils.normalizePath(projectPath);
+
             // Create interaction summary text
             const summary = `## Interaction Summary ${interactionSummary.thoughtNumber}/${interactionSummary.totalThoughts}
 
@@ -347,7 +354,7 @@ ${interactionSummary.why}
 ${interactionSummary.what}`;
 
             // Save the summary to the conclusion.md file
-            return await this.appendToConclusion(summary, projectPath);
+            return await this.appendToConclusion(summary, normalizedProjectPath);
         } catch (error: any) {
             this.logger.error('Error recording interaction summary', { error });
             return null;
