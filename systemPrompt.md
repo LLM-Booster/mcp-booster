@@ -139,7 +139,7 @@ flowchart TD
 
 **🏗️ MONOREPO PROJECTS - projectPath Usage:**
 - **If provided, use the absolute root path** of the monorepo project
-- **Example:** `/path/to/my-monorepo` (root of monorepo, not subprojects)
+- **Example:** `/path/to/monorepo-project` (root of monorepo, not subprojects)
 
 **ThoughtEntry Structure (each object in thoughts array must contain):**
 ```typescript
@@ -195,8 +195,8 @@ flowchart TD
 
 **🏗️ MONOREPO PROJECTS - CRITICAL:**
 - **ALWAYS use the absolute root path** of the monorepo project (not subproject paths)
-- **Example:** `/path/to/my-monorepo` (correct)
-- **NOT:** `/path/to/my-monorepo/packages/frontend` (incorrect)
+- **Example:** `/path/to/monorepo-project` (correct)
+- **NOT:** `/path/to/monorepo-project/packages/frontend` (incorrect)
 - This ensures all booster data is centralized in the main project root
 
 #### Booster_Steps Function:
@@ -225,8 +225,8 @@ flowchart TD
 
 **🏗️ MONOREPO PROJECTS - CRITICAL projectPath Usage:**
 - **ALWAYS use the absolute root path** of the monorepo project (never subproject paths)
-- **Correct:** `/path/to/my-monorepo`
-- **Incorrect:** `/path/to/my-monorepo/apps/backend`
+- **Correct:** `/path/to/monorepo-project`
+- **Incorrect:** `/path/to/monorepo-project/apps/backend`
 - **Reason:** Centralized task management and consistent data organization across all monorepo components
 
 **TaskStep Structure (each step must contain - AI-Optimized):**
