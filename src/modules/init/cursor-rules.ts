@@ -17,6 +17,7 @@ function showSupportInfo(): void {
 export interface CursorRulesConfig {
     projectPath: string;
     systemPromptPath: string;
+    windowsAuxPromptPath?: string;
 }
 
 export interface CursorRulesResult {
@@ -37,7 +38,7 @@ export interface CursorRulesResult {
  */
 export async function createCursorRules(config: CursorRulesConfig): Promise<CursorRulesResult> {
     const debugMode = process.env.DEBUG === 'true';
-    
+
     try {
         if (debugMode) {
             console.log('🔍 [DEBUG] Starting cursor rules creation...');
@@ -47,7 +48,7 @@ export async function createCursorRules(config: CursorRulesConfig): Promise<Curs
 
         // Decodificar e normalizar o projectPath para resolver problemas de URL encoding no Windows
         const normalizedProjectPath = PathUtils.normalizePath(config.projectPath);
-        
+
         if (debugMode) {
             console.log('🔍 [DEBUG] Original path:', config.projectPath);
             console.log('🔍 [DEBUG] Normalized path:', normalizedProjectPath);
@@ -66,23 +67,23 @@ export async function createCursorRules(config: CursorRulesConfig): Promise<Curs
             };
         }
 
-        // Lê o conteúdo do systemPrompt.md
-        const systemPromptContent = await readSystemPrompt(config.systemPromptPath);
-        
+        // Lê o conteúdo do systemPrompt.md e adiciona conteúdo do Windows se necessário
+        const systemPromptContent = await readAndCombineSystemPrompt(config.systemPromptPath, config.windowsAuxPromptPath);
+
         if (debugMode) {
             console.log('🔍 [DEBUG] SystemPrompt content length:', systemPromptContent.length);
         }
 
         // Determina o caminho de destino (sempre local)
         const targetPath = getLocalCursorRulesPath(normalizedProjectPath);
-        
+
         if (debugMode) {
             console.log('🔍 [DEBUG] Target path:', targetPath);
         }
 
         // Cria o arquivo de cursor rules locais com verificações robustas
         const createResult = await createCursorRulesFile(targetPath, systemPromptContent);
-        
+
         if (!createResult.success) {
             return {
                 success: false,
@@ -94,7 +95,7 @@ export async function createCursorRules(config: CursorRulesConfig): Promise<Curs
 
         // Verificar se o arquivo foi realmente criado e obter detalhes
         const verificationResult = await verifyCursorRulesFile(targetPath);
-        
+
         if (debugMode) {
             console.log('🔍 [DEBUG] Verification result:', verificationResult);
         }
@@ -107,7 +108,7 @@ export async function createCursorRules(config: CursorRulesConfig): Promise<Curs
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        
+
         if (debugMode) {
             console.log('❌ [DEBUG] Unexpected error:', errorMessage);
             console.log('❌ [DEBUG] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
@@ -125,11 +126,74 @@ export async function createCursorRules(config: CursorRulesConfig): Promise<Curs
 }
 
 /**
+ * Lê o conteúdo do arquivo systemPrompt.md base e adiciona conteúdo específico do Windows se necessário
+ */
+async function readAndCombineSystemPrompt(systemPromptPath: string, windowsAuxPromptPath?: string): Promise<string> {
+    const debugMode = process.env.DEBUG === 'true';
+
+    try {
+        // Primeiro, lê o conteúdo base do systemPrompt.md
+        const baseContent = await readSystemPrompt(systemPromptPath);
+
+        // Detecta se estamos no Windows e se o arquivo auxiliar existe
+        const { detectOS } = require('./os-detector');
+        const currentOS = detectOS();
+
+        if (currentOS === 'windows' && windowsAuxPromptPath && fs.existsSync(windowsAuxPromptPath)) {
+            if (debugMode) {
+                console.log('🪟 [DEBUG] Windows detected - adding Windows-specific content');
+            }
+
+            // Lê o conteúdo específico do Windows
+            const windowsContent = await readSystemPrompt(windowsAuxPromptPath);
+
+            // Procura onde inserir o conteúdo do Windows no arquivo base
+            // Vamos inserir após a seção "## Important" e antes da próxima seção
+            const insertionPoint = baseContent.indexOf('\n## ⚠️ CRITICAL:');
+
+            if (insertionPoint !== -1) {
+                // Insere o conteúdo do Windows antes da seção crítica
+                const beforeInsertion = baseContent.substring(0, insertionPoint);
+                const afterInsertion = baseContent.substring(insertionPoint);
+
+                const combinedContent = beforeInsertion + '\n' + windowsContent + '\n' + afterInsertion;
+
+                if (debugMode) {
+                    console.log('✅ [DEBUG] Windows content successfully combined with base content');
+                }
+
+                return combinedContent;
+            } else {
+                // Se não encontrar o ponto de inserção, adiciona no final
+                if (debugMode) {
+                    console.log('⚠️ [DEBUG] Insertion point not found, appending Windows content at the end');
+                }
+
+                return baseContent + '\n\n' + windowsContent;
+            }
+        }
+
+        // Se não for Windows ou arquivo não existir, retorna apenas o conteúdo base
+        if (debugMode) {
+            console.log(`🔍 [DEBUG] Using base system prompt only for OS: ${currentOS}`);
+        }
+
+        return baseContent;
+
+    } catch (error) {
+        if (debugMode) {
+            console.log('❌ [DEBUG] Error combining system prompt content:', error);
+        }
+        throw error;
+    }
+}
+
+/**
  * Lê o conteúdo do arquivo systemPrompt.md com verificação robusta
  */
 async function readSystemPrompt(systemPromptPath: string): Promise<string> {
     const debugMode = process.env.DEBUG === 'true';
-    
+
     try {
         if (!fs.existsSync(systemPromptPath)) {
             throw new Error(`Arquivo systemPrompt.md não encontrado em: ${systemPromptPath}`);
@@ -149,7 +213,7 @@ async function readSystemPrompt(systemPromptPath: string): Promise<string> {
         }
 
         const content = fs.readFileSync(systemPromptPath, 'utf-8');
-        
+
         if (!content || content.trim().length === 0) {
             throw new Error(`Arquivo systemPrompt.md está vazio: ${systemPromptPath}`);
         }
@@ -180,14 +244,14 @@ function getLocalCursorRulesPath(projectPath: string): string {
 
     // Usar a função segura para criar diretório
     const createResult = PathUtils.safeCreateDirectory(rulesDir);
-    
+
     if (!createResult.success) {
         throw new Error(`Falha ao criar diretório .cursor/rules: ${createResult.error}`);
     }
 
     if (debugMode) {
         console.log('✅ [DEBUG] Rules directory ensured');
-        
+
         // Listar arquivos existentes para debug
         try {
             const existingFiles = fs.readdirSync(rulesDir).filter(file => file !== 'llmbooster.mdc');
@@ -210,7 +274,7 @@ async function createCursorRulesFile(
     systemPromptContent: string
 ): Promise<{ success: boolean; error?: string; details?: any }> {
     const debugMode = process.env.DEBUG === 'true';
-    
+
     try {
         if (debugMode) {
             console.log('🔍 [DEBUG] Creating cursor rules file at:', targetPath);
@@ -218,7 +282,7 @@ async function createCursorRulesFile(
 
         // Verificar se o arquivo já existe
         const fileExists = fs.existsSync(targetPath);
-        
+
         if (debugMode && fileExists) {
             console.log('🔍 [DEBUG] File already exists, will overwrite');
         }
@@ -267,7 +331,7 @@ async function createCursorRulesFile(
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        
+
         if (debugMode) {
             console.log('❌ [DEBUG] Error creating file:', errorMessage);
         }
@@ -295,20 +359,20 @@ async function verifyCursorRulesFile(filePath: string): Promise<{
         }
 
         const stats = fs.statSync(filePath);
-        
+
         // Verificar permissões
         let isReadable = false;
         let isWritable = false;
-        
+
         try {
             fs.accessSync(filePath, fs.constants.R_OK);
             isReadable = true;
-        } catch {}
-        
+        } catch { }
+
         try {
             fs.accessSync(filePath, fs.constants.W_OK);
             isWritable = true;
-        } catch {}
+        } catch { }
 
         return {
             fileExists: true,
@@ -362,7 +426,7 @@ export function cursorRulesExist(config: CursorRulesConfig): boolean {
  */
 export async function removeCursorRules(config: CursorRulesConfig): Promise<CursorRulesResult> {
     const debugMode = process.env.DEBUG === 'true';
-    
+
     try {
         // Decodificar o projectPath para resolver problemas de URL encoding no Windows
         const normalizedProjectPath = PathUtils.normalizePath(config.projectPath);
@@ -385,7 +449,7 @@ export async function removeCursorRules(config: CursorRulesConfig): Promise<Curs
             }
 
             fs.unlinkSync(targetPath);
-            
+
             // Verificar se foi removido
             if (fs.existsSync(targetPath)) {
                 return {
@@ -406,7 +470,7 @@ export async function removeCursorRules(config: CursorRulesConfig): Promise<Curs
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        
+
         if (debugMode) {
             console.log('❌ [DEBUG] Error removing cursor rules:', errorMessage);
         } else {

@@ -33,28 +33,24 @@ function showSupportInfo(): void {
 
 /**
  * Determines which systemPrompt file to use based on the operating system
+ * Now always returns the base systemPrompt.md - Windows content will be added dynamically
  */
 function getSystemPromptPath(): string {
     const fs = require('fs');
-    const currentOS = detectOS();
-    
-    // Define paths for different system prompts
-    const windowsPromptPath = path.join(__dirname, '../../../systemPrompt-Windows.md');
     const defaultPromptPath = path.join(__dirname, '../../../systemPrompt.md');
-    
-    // Use Windows-specific prompt if on Windows and file exists
-    if (currentOS === 'windows' && fs.existsSync(windowsPromptPath)) {
-        if (process.env.DEBUG) {
-            console.log('🪟 [DEBUG] Using Windows-specific system prompt');
-        }
-        return windowsPromptPath;
-    }
-    
-    // Fallback to default prompt
+
     if (process.env.DEBUG) {
-        console.log(`🔍 [DEBUG] Using default system prompt for OS: ${currentOS}`);
+        console.log(`🔍 [DEBUG] Using base system prompt: ${path.basename(defaultPromptPath)}`);
     }
+
     return defaultPromptPath;
+}
+
+/**
+ * Gets the path to Windows auxiliary content file
+ */
+function getWindowsAuxPromptPath(): string {
+    return path.join(__dirname, '../../../systemPrompt-AuxWindows.md');
 }
 
 /**
@@ -137,11 +133,13 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
             const installResult: ConfigResult = installMcpBoosterConfig(mcpConfigPath, sanitizedApiKey);
 
             // Local Cursor Rules creation
-            // Use appropriate systemPrompt based on OS (Windows gets Windows-specific version)
+            // Use base systemPrompt and add Windows content if needed
             const systemPromptPath = getSystemPromptPath();
+            const windowsAuxPromptPath = getWindowsAuxPromptPath();
             const cursorRulesConfig: CursorRulesConfig = {
                 projectPath: process.cwd(),
-                systemPromptPath: systemPromptPath
+                systemPromptPath: systemPromptPath,
+                windowsAuxPromptPath: windowsAuxPromptPath
             };
 
             const cursorRulesResult: CursorRulesResult = await createCursorRules(cursorRulesConfig);
@@ -157,7 +155,7 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
                     const promptFileName = path.basename(systemPromptPath);
                     console.log('   • Cursor Rules (current project)');
                     console.log(`     ↳ OS: ${currentOS} → Using: ${promptFileName}`);
-                    
+
                     // Mostrar detalhes do arquivo criado se disponível
                     if (cursorRulesResult.details && cursorRulesResult.details.fileSize) {
                         console.log(`     ↳ File: ${cursorRulesResult.filePath}`);
@@ -170,13 +168,13 @@ export async function executeInitCommand(argv: string[]): Promise<InitResult> {
                     console.error('❌ Cursor Rules Creation Failed:');
                     console.error(`   Error: ${cursorRulesResult.error || 'Unknown error'}`);
                     console.error(`   Message: ${cursorRulesResult.message}`);
-                    
+
                     if (cursorRulesResult.filePath) {
                         console.error(`   Target Path: ${cursorRulesResult.filePath}`);
                     }
-                    
+
                     console.log('');
-                    
+
                     showSupportInfo();
                 }
 
@@ -265,7 +263,7 @@ export function validateSystemRequirements(): {
 
     // Check if in a project directory  
     const hasPackageJson = require('fs').existsSync(path.join(process.cwd(), 'package.json'));
-    
+
     // Note: systemPrompt.md is now bundled with the package, not required in user's directory
 
     return {
