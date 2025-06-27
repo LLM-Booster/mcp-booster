@@ -60,7 +60,7 @@ export const defaultConfig: Config = {
     // Configurações do servidor MCP
     server: {
         name: "MCP-Booster",
-        version: "0.7.0",
+        version: "0.7.4",
         transport: "stdio",
         protocolVersion: "0.1.0"
     },

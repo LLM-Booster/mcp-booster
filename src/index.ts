@@ -160,9 +160,15 @@ interface VerificationResult {
  */
 async function callCoConuTEndpoint(params: CoConuTParams): Promise<CoConuTLambdaResult> {
   try {
+    // Adicionar timestamp local se não foi fornecido
+    const paramsWithTimestamp = {
+      ...params,
+      timestamp: Date.now() // Usar data local do usuário
+    };
+
     // Preparar o corpo da requisição
     const lambdaInput = {
-      params,
+      params: paramsWithTimestamp,
       state: coconutState,
       config: config.coconut
     };

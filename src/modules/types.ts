@@ -76,6 +76,7 @@ export interface CoConuTParams {
     numberArray?: number[];
     Call_Booster_Analyser: boolean;
     Call_Booster_Steps: boolean;
+    timestamp?: number; // Timestamp gerado localmente pelo usuário
 }
 
 /**
@@ -121,7 +122,8 @@ export const CoConuTParamsSchema = z.object({
     options: z.array(z.string()).optional().describe("List of options for the user to choose from"),
     numberArray: z.array(z.number()).optional().describe("Array of numbers provided as input"),
     Call_Booster_Analyser: z.boolean().describe("Indicates if the Booster_Analyser should be called"),
-    Call_Booster_Steps: z.boolean().describe("Indicates if the Booster_Steps should be called")
+    Call_Booster_Steps: z.boolean().describe("Indicates if the Booster_Steps should be called"),
+    timestamp: z.number().optional().describe("Timestamp generated locally by the user (Unix timestamp in milliseconds)")
 });
 
 /**
