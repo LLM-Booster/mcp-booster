@@ -1,6 +1,6 @@
 {
   "name": "mcp-booster",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Servidor MCP com CoConuT (Continuous Chain of Thought) para uso com Cursor IDE - Pacote Global NPM",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

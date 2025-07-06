@@ -160,15 +160,16 @@ interface VerificationResult {
  */
 async function callCoConuTEndpoint(params: CoConuTParams): Promise<CoConuTLambdaResult> {
   try {
-    // Adicionar timestamp local se não foi fornecido
-    const paramsWithTimestamp = {
+    // Calcular o offset da timezone em horas em vez de enviar timestamp completo
+    const timezoneOffset = -new Date().getTimezoneOffset() / 60; // Converter minutos para horas
+    const paramsWithTimezoneOffset = {
       ...params,
-      timestamp: Date.now() // Usar data local do usuário
+      timezoneOffset // Enviar apenas o offset da timezone
     };
 
     // Preparar o corpo da requisição
     const lambdaInput = {
-      params: paramsWithTimestamp,
+      params: paramsWithTimezoneOffset,
       state: coconutState,
       config: config.coconut
     };
