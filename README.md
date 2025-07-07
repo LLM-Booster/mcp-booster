@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/llm-booster-mcp-booster-badge.png)](https://mseep.ai/app/llm-booster-mcp-booster)
+
 # MCP-Booster 🚀
 ## The Future of Development Productivity Has Arrived
 
